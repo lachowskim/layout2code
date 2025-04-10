@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset='utf-8'>
+        <meta http-equiv='X-UA-Compatible' content='IE=edge'>
+        <title>Michał Lachowski Front End Developer</title>
+        <meta name='viewport' content='width=device-width, initial-scale=1'>
+        
+        <!-- My stylesheet -->
+        <link rel='stylesheet' href='style.css'>   
+        <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+        <!-- Font Awesome for icons -->
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+
+        <!-- Splitting.js CSS -->
+        <link rel="stylesheet" href="https://unpkg.com/splitting/dist/splitting.css" />
+
+        <!-- Swiper's stylesheet 
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@8/swiper-bundle.min.css"/> 
+        -->
+        
+        <!-- LiveServer reload fix script - run before anything else -->
+        <script>
+            // Clear any reload flags that might be causing issues
+            try {
+                sessionStorage.removeItem('isReloading');
+                console.log("🛠️ Anti-reload loop protection active");
+            } catch (e) {
+                console.error("Failed to clear sessionStorage:", e);
+            }
+            
+            // Create global helper
+            window.fixReload = function() {
+                console.log("🔄 Applying reload fix...");
+                sessionStorage.clear();
+                return "Session storage cleared - try refreshing now";
+            };
+        </script>
+    </head>
+<body> 
+<!-- Preloader -->
+<div id="preloader"></div>
+
+<video autoplay muted loop id="bg-video">
+    <source src="4K.mp4" type="video/mp4"> 
+    Your browser does not support HTML5 video.
+</video> 
+<div class="overlay"></div>
+
+{% include "header-template.html" %} 
+
+{% block content %} {% endblock %}
+
+{% include "footer-template.html" %}
+<!-- GSAP and ScrollTrigger -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/ScrollTrigger.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollToPlugin.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/Observer.min.js"></script>
+<!-- Scripts at the end of body -->
+ 
+<script src="js/script.js"></script>
+
+<!-- Persistent UI Elements -->
+<div class="socials">
+    <span id="line"></span>
+    <a href="https://www.linkedin.com/in/micha%C5%82-lachowski-5a227614a/" target="_blank"><img src="img/linkedin.png"></a>
+    <a href="https://www.upwork.com/freelancers/~015492513b3724189a" target="_blank"><img src="img/upwork.png"></a>
+</div>
+<div class="scroll-down">
+    <a href="#about" class="scroll-btn"><img src="img/scroll-btn.png"></a> 
+    <a href="#about" class="scroll-btn-arrow"><img src="img/scroll-btn-arrow.png"></a>  
+</div>
+<div class="scroll-up"> 
+    
+    <a href="#banner" class="scroll-btn"><img src="img/scroll-btn.png"></a>  
+    <a href="#banner" class="scroll-btn-arrow"><img src="img/scroll-btn-arrow.png"></a> 
+</div>
+
+<!-- Section Dot Navigation -->
+<div class="section-dots"></div>
+
+<!-- Splitting.js JS -->
+<script src="https://unpkg.com/splitting/dist/splitting.min.js"></script>
+
+</body> 
+</html>       

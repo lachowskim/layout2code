@@ -1,0 +1,35 @@
+---
+description: IMPLEMENT user requests involving keywords like 'instant', 'permanent', 'always', 'fast', 'immediately' DIRECTLY AND FULLY WHEN coding or configuring BECAUSE the user requires non-incremental changes for such directives.
+globs: src/**/*.{js,scss,html},.cursor/rules/*.mdc
+---
+
+# Rule: Direct Implementation for Keywords
+
+## Context
+- The user may provide instructions using keywords that imply a requirement for immediate, complete, or non-negotiable implementation (e.g., "instant reaction", "always visible", "permanent fix", "make it fast").
+- In these cases, incremental adjustments or partial implementations should be avoided unless technically impossible or explicitly requested otherwise by the user.
+
+## Requirements
+- ✅ **ALWAYS** identify keywords indicating a need for direct and full implementation (instant, permanent, always, fast, immediately, must, required, etc.).
+- ✅ IMPLEMENT the request using the most direct technical approach (e.g., setting a value to 0 for 'instant', using `position: fixed` for 'permanent'/'always visible', optimizing code for 'fast').
+- ❌ **AVOID** incremental steps (e.g., changing 10 -> 5 when 0 was requested for 'instant') unless there's a strong technical reason, which must be explained.
+- ✅ If a direct implementation might have significant negative side effects, implement it first as requested, then immediately highlight the potential side effects and suggest refinements if necessary.
+- ✅ DOCUMENT the direct implementation clearly in `@memories.md` and `@scratchpad.md`.
+
+## Examples
+
+### ✅ Good Example
+- User Request: "Make the scroll reaction instant."
+- Action: Set relevant timing/tolerance parameters (e.g., GSAP Observer `tolerance` or `throttle`) directly to `0`.
+
+### ❌ Invalid Example
+- User Request: "Make the scroll reaction instant."
+- Action: Set GSAP Observer `tolerance` to `5` (instead of `0`) as an intermediate step. (Incorrect - violates directness)
+
+### ✅ Good Example
+- User Request: "This button must always be visible."
+- Action: Apply `position: fixed` and a high `z-index` in CSS.
+
+### ❌ Invalid Example
+- User Request: "This button must always be visible."
+- Action: Apply `position: absolute` within a parent container. (Incorrect - doesn't guarantee viewport visibility) 

@@ -1,0 +1,51 @@
+<div id="header">
+    <div class="header page-limit">
+        <a href="#banner" class="logo-wrapper">
+            <svg version="1.2" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 303 302" width="70" height="70" id="headerLogo">
+              <title>Rotating Arrow Logo</title>
+              <style>
+                /* Static rounded square background */
+                #background {
+                  fill: #f1b247;
+                  rx: 40;  /* Corner radius */
+                  ry: 40;
+                }
+                /* Rotating arrow */
+                #arrowGroup {
+                  transform-origin: 26% 40%; /* Perfect center rotation */
+                }
+                #arrow {
+                  fill: #141415;
+                }
+              </style>
+              
+              <!-- Rounded square background -->
+              <rect id="background" width="303" height="302"/>
+              
+              <!-- Arrow group for rotation from center -->
+              <g id="arrowGroup">
+                <!-- Split into two separate paths for perfect alignment -->
+                <path id="arrow1" d="M124.3 45.5l-12.9 13.1c-0.4 118.2-0.3 123.2 1.4 126.4 0.9 1.9 3.3 4.5 5.2 5.8l3.5 2.3 124-0.2c22.1-21.9 25.5-25.9 25.1-27.2-0.6-1.6-4.5-1.7-63.1-1.7h-62.5l-5-6c0-112.3-0.2-121.8-1.4-123.5-1.4-1.9-2.1-1.4-14.3 11z" />
+                <path id="arrow2" d="M79.5 83.4l-13.6 13.6c0.6 129.7 0.6 130.5 2.7 133.5 1.2 1.7 3.7 3.8 5.8 4.7 3.3 1.7 8.7 1.8 67.8 1.8h64.3c23.4-23.2 26.6-26.9 26.1-28.3-0.6-1.6-4.6-1.7-65.3-1.7-49.4-0.1-65.2-0.4-66.3-1.3-0.8-0.7-2.2-2.1-3-3.1-1.3-1.6-1.6-11.2-2-66.9-0.4-47.9-0.8-65.1-1.7-65.4-0.6-0.3-7.3 5.7-14.8 13.1z" />
+              </g>
+            </svg>
+        </a> 
+        <div id="dynamic-header-title-container"></div>
+        <div id="navbar" class="menu-wrapper page-limit">
+            <div id="menuToggle">
+                <ul class="menu">
+                    <a href="#banner" class="underline option selected">
+                        HOME
+                    </a>
+                    <a href="#about" class="underline option">
+                        ABOUT ME
+                    </a>  
+
+                    <a href="#form" class="underline option">
+                        CONTACT 
+                    </a>
+                </ul>
+            </div>
+        </div> 
+    </div>
+</div>  

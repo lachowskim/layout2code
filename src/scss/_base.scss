@@ -1,0 +1,272 @@
+$colors-stack: (
+    black: (#000000, #121212, #151515, #4f4942),
+    grey: (#f2f2f2, #838383),
+    white: (#ffffff, #f7f7f7),
+    brown: (#707070, #535353),
+    green: (#81a57F, rgb(111, 145, 111), #d6ddd5, #eceeec),
+    dark-green: (#80a47e, #6e8f6c),
+    purple: (#e72d76, #623989, #8c5db0, #9c2e74),
+    orange: (#db6400, #ffa62b, #f1b247, #b88674, #9b6a59, #d87a5c),
+    blue: (blue, blue)
+);
+
+@use "functions";
+@use "reset";
+
+@import url('https://fonts.googleapis.com/css2?family=Lato:ital,wght@0,100;0,300;0,400;0,700;0,900;1,100;1,300;1,400;1,700;1,900&display=swap');
+
+
+
+$colors-stack: (
+    black: (#000000, #121212, #151515, #4f4942),
+    grey: (#f2f2f2, #838383),
+    white: (#ffffff, #f7f7f7),
+    brown: (#707070, #535353),
+    green: (#81a57F, rgb(111, 145, 111), #d6ddd5, #eceeec),
+    dark-green: (#80a47e, #6e8f6c),
+    purple: (#e72d76, #623989, #8c5db0, #9c2e74),
+    orange: (#db6400, #ffa62b, #f1b247, #b88674, #9b6a59, #d87a5c),
+    blue: (blue, blue)
+);
+
+$base-font-size: calc(.12vw + 1rem);
+$base-font-weight: 700;
+$base-font-family: "Lato", sans-serif;
+$header-font-family: "Lato", sans-serif;
+$header-font-size: calc(2.16vw + 1rem);
+$header-font-weight: 700;
+$default-animation: 0.3s ease-in;  
+
+
+
+$breakpoints: (
+		large : 1400px,
+		medium: 899px,
+		small : 599px
+);
+
+
+
+.cover {
+	background-size: cover;
+	background-position: center;
+}
+
+html {
+	min-height: 100%;
+	scroll-behavior: smooth;
+}
+
+body {
+	margin: 0;
+	padding: 0;
+	background: #121212;
+	font-size: $base-font-size;
+    color: white;
+	transition: all .3s;
+	font-family: $base-font-family;
+}  
+
+#preloader {
+	position: fixed;
+	width: 100%;
+	height: 100%;
+	background: black;
+	z-index: 1000000;
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	top: 0;
+	left: 0;
+	opacity: 1;
+	pointer-events: none;
+	will-change: opacity;
+}
+
+.svg { path, g, polygon { transition: .25s all; } } 
+
+.page-limit {
+	margin: 0 auto;
+	max-width: 1500px; 
+
+	@media(max-width: 1500px) {
+		max-width: 1200px;
+		padding: 0 30px;
+	}
+
+	@media (max-width: 1300px) {
+		max-width: 90%;
+	}
+
+	@media (max-width: 899px) {
+		padding: 0 50px;
+	}
+
+	@media (max-width: 599px) {
+		padding: 0 15px;
+	} 
+
+	&.nav-spacer {
+		padding: 0 60px;
+		max-width: 100%;
+	}
+
+	&.big {
+		max-width: 90%;
+	}
+
+	&.small {
+		max-width: 1300px;
+
+		@media (max-width: 1400px) {
+			max-width: 1100px;
+		}
+	}
+
+	&.smaller {
+		max-width: 610px;
+	}
+}
+
+
+
+h1, h2, h3, h4, h5 {
+    font-family: $base-font-family;
+    font-weight: $header-font-weight;
+    font-size: $header-font-size;
+    color: white; 
+}
+
+// Ensure characters created by Splitting.js inside H1/H2 inherit parent color
+h1 .char, 
+h2 .char {
+    color: inherit;
+    position: relative;
+    z-index: 1;
+    display: inline-block;
+}
+
+h1 {
+	font-size: 3rem;
+
+	@media (max-width: 1366px) {
+		font-size: 2.3rem;
+	}
+}
+
+h2 {
+	font-size: 2.9375rem;
+	font-weight: 700;
+}
+
+h3 {
+	font-size: 2.5rem;
+	font-family: $header-font-family;
+	padding: 10px 0 0 0;
+}
+
+h4 {
+	font-size: 1.5rem;
+	color: white;
+}
+
+
+a {
+	text-decoration: none;
+	display: inline-block;
+	position: relative;
+	color: white;
+
+  }
+  a.underline:after {    
+	background: none repeat scroll 0 0 transparent;
+	top: 33px;
+	content: "";
+	display: block;
+	height: 4px;
+	left: 50%;
+	position: absolute;
+	background: functions.get-color(orange, 3);
+	transition: width 0.3s ease 0s, left 0.3s ease 0s;
+	border-top-right-radius: 5px;
+	border-top-left-radius: 5px;
+	width: 0;
+
+	@media(max-width: 1400px) {
+		top: 56px;
+	}
+
+	@media (max-width: 768px) {
+		height: 0;
+	}
+  }
+  a:hover:after { 
+	width: 20%; 
+	left: 40%;
+  }
+  @media screen and (max-height: 300px) {
+	  ul {
+		  margin-top: 40px;
+	  }
+  }
+
+a:active, a:visited, a:link, a:hover {
+    text-decoration: none;
+    cursor: pointer;
+}
+
+*:focus {
+	outline: none;
+}
+
+
+
+section {
+	background: functions.get-color(black, 2);
+}  
+
+
+
+
+.btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+	width: 140px;
+	background: transparent;
+    padding: 20px 20px;
+    color: #F1B247;
+    border-radius: 4px;
+    font-weight: 700;
+	font-family: $base-font-family;
+    font-size: 18px;
+    overflow: hidden;
+    border: 3px solid #F1B247;
+    text-transform: uppercase;
+    position: relative;
+    z-index: 1;
+    cursor: pointer;
+    text-decoration: none;
+
+    &::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: #F1B247;
+        z-index: -1;
+        clip-path: circle(0% at var(--x, 50%) var(--y, 50%));
+        transition: clip-path 0.45s ease-out;
+    }
+
+    &:hover {
+        color: white;
+    }
+
+    &.radial-hover::before {
+        clip-path: circle(150% at var(--x, 50%) var(--y, 50%));
+    }
+}
+

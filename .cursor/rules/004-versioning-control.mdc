@@ -1,0 +1,40 @@
+---
+description: INCREMENT versions using Semantic Versioning (SemVer) WHEN UPDATING documentation (`@memories.md`, `@lessons-learned.md`) BECAUSE it ensures consistent tracking of changes and project maturity.
+globs: .cursor/memories.md,.cursor/lessons-learned.md
+---
+
+# Rule: Versioning Control (SemVer)
+
+## Context
+- This project uses version numbers (e.g., `[v0.5.1]`, `[v0.5.1-LL002]`) in documentation files to track changes.
+- Adhering to Semantic Versioning (MAJOR.MINOR.PATCH) provides clarity on the nature of changes.
+- For this project during active development and fixing stages (pre-1.0.0), increments should primarily affect the MINOR or PATCH version.
+
+## Requirements
+- ✅ **ALWAYS** follow Semantic Versioning principles.
+- ✅ For bug fixes, minor feature updates, or refactoring during the 0.x.x phase, INCREMENT the **MINOR** version (e.g., `v0.5.x` to `v0.6.0`) or the **PATCH** version (e.g., `v0.5.1` to `v0.5.2`).
+- ✅ The **maximum increment allowed for a single set of related fixes/changes is 0.1** on the MINOR version (e.g., 0.5 -> 0.6) OR increments to the PATCH version.
+- ❌ **NEVER** jump directly to `v1.0.0` or increment the MAJOR version during the initial development and fixing phases unless a significant, stable release milestone is achieved and agreed upon.
+- ✅ Ensure version numbers in `@memories.md` and `@lessons-learned.md` are consistent for related changes.
+
+## Examples
+
+### ✅ Good Example (Patch Fix)
+Previous version: `[v0.5.1]`
+Change: Fixed a bug.
+New version: `[v0.5.2]`
+
+### ✅ Good Example (Minor Feature/Refactor)
+Previous version: `[v0.5.2]`
+Change: Implemented a new small feature or completed a significant refactor.
+New version: `[v0.6.0]`
+
+### ❌ Invalid Example (Major Jump)
+Previous version: `[v0.5.1]`
+Change: Fixed a bug.
+New version: `[v1.0.0]` (Incorrect - MAJOR jump for a fix)
+
+### ❌ Invalid Example (Excessive Minor Jump)
+Previous version: `[v0.5.1]`
+Change: Fixed a bug.
+New version: `[v0.7.0]` (Incorrect - Jumped more than 0.1 for a fix) 

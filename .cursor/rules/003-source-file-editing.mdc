@@ -1,0 +1,36 @@
+---
+description: EDIT source files in `src/` directory INSTEAD OF `dist/` directory when MAKING code changes BECAUSE `dist/` is overwritten by the Gulp build process.
+globs: src/**/*.{js,scss,html}
+---
+
+# Rule: Edit Source Files Only (Gulp Workflow)
+
+## Context
+- This project uses Gulp (`gulpfile.js`) to compile assets from the `src` directory (SCSS, JS, Nunjucks HTML) into the `dist` directory.
+- The `gulp watch` task automatically overwrites files in `dist` whenever corresponding files in `src` are saved.
+- **Therefore, any direct edits made to files in the `dist` directory will be lost.**
+
+## Requirements
+- ✅ **ALWAYS** make code modifications (HTML, SCSS, JS) within the `src` directory (`src/js`, `src/scss`, `src/pages`, `src/templates`).
+- ❌ **NEVER** edit files directly in the `dist` directory unless specifically instructed for temporary debugging *and* understanding the change will be overwritten.
+- Verify that Gulp tasks (`scssTask`, `jsTask`, `nunjucksTask`) are correctly processing the relevant `src` files.
+
+## Examples
+
+### ✅ Good Example (Editing SCSS)
+Modify `src/scss/main.scss` or `src/scss/_base.scss`, then run Gulp or let the watcher compile it to `dist/style.css`.
+
+### ❌ Invalid Example (Editing CSS directly)
+Editing `dist/style.css` directly. This change will be lost when `src/scss/main.scss` is recompiled.
+
+### ✅ Good Example (Editing JS)
+Modify `src/js/script.js`, then run Gulp or let the watcher compile it to `dist/js/script.js`.
+
+### ❌ Invalid Example (Editing compiled JS directly)
+Editing `dist/js/script.js` directly. This change will be lost when `src/js/script.js` is recompiled.
+
+### ✅ Good Example (Editing HTML Structure)
+Modify `src/pages/index.html` or `src/templates/structure_template.html`, then run Gulp or let the watcher compile it to `dist/index.html`.
+
+### ❌ Invalid Example (Editing compiled HTML directly)
+Editing `dist/index.html` directly. This change will be lost when `src/pages/index.html` or related templates are recompiled. 

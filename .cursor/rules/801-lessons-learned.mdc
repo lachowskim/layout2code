@@ -1,0 +1,54 @@
+---
+description: DOCUMENT development insights and solutions when ENCOUNTERING issues or improvements to MAINTAIN knowledge
+globs: .cursor/lessons-learned.md
+alwaysApply: false
+---
+# Lessons Learned Protocol
+
+> Version: 1.0.0
+
+## Context 📚
+- Serves as critical knowledge base for development insights
+- Captures solutions and best practices
+- Documents issues and their resolutions
+- Maintains project-wide learning history
+
+## Requirements 📋
+
+### Entry Format
+Single-line comprehensive format:
+```markdown
+[v1.0.0-LL001] Category: Issue → Solution → Impact
+```
+
+### Version Format
+- Format: v{major}.{minor}.{patch}-LL{sequential_number}
+  - major: Breaking changes
+  - minor: New features/significant updates
+  - patch: Bug fixes/minor updates
+  - LL: Lessons Learned prefix
+  - sequential_number: Unique 3-digit identifier (001-999)
+
+## Examples 💡
+
+### ✅ Good Lesson Entry
+```markdown
+[v1.0.0-LL001] Component Error: TextInput props incompatible with DatePicker causing type errors during component composition → Implemented strict prop type validation and interface checks before component extension → Critical for preventing runtime type mismatches and ensuring component reusability
+```
+
+### ❌ Invalid Lesson Entry
+```markdown
+Bug: Button not working
+Fixed it by changing the code
+[No version ID ❌]
+[No category ❌]
+[No impact assessment ❌]
+```
+
+## ⚠️ Critical Rules
+- ALWAYS include version ID, category, and impact
+- NEVER delete or modify existing entries
+- MAINTAIN single-line format for all entries
+- INCLUDE clear problem → solution → impact chain
+- CATEGORIZE entries appropriately
+- INCREMENT version numbers appropriately based on change type

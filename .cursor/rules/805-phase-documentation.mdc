@@ -1,0 +1,191 @@
+---
+description: DOCUMENT phase completion details when TRANSITIONING between project phases to MAINTAIN comprehensive development history
+globs: docs/phases/PHASE-*/[FEATURE].md
+alwaysApply: false
+---
+# Phase Documentation System
+
+<version>1.0.0</version>
+
+## Context
+- Documents completion of project phases
+- Maintains technical decision history
+- Tracks implementation progress
+- Ensures knowledge retention
+- Cross-references with other documentation
+- Facilitates project handover and review
+
+## Requirements
+
+### Documentation Structure
+1. File Organization
+   ```md
+   docs/phases/PHASE-X/
+   ├── README.md           # Phase overview
+   ├── [FEATURE-NAME].md   # Feature documentation
+   ├── technical/          # Technical documentation
+   ├── decisions/         # Decision records
+   └── assets/            # Related assets   
+   ```
+
+2. Mandatory Sections
+   ```md
+   # [Feature Name] - Phase X
+
+   ## Overview
+   - Phase number and name
+   - Start and end dates
+   - Team members involved
+   - Phase objectives
+
+   ## Implementation Details
+   - Components implemented
+   - Technical architecture
+   - Dependencies
+   - API endpoints
+
+   ## Technical Decisions
+   - Key decisions made
+   - Alternatives considered
+   - Rationale
+   - Impact assessment
+
+   ## Code Examples
+   - Key implementations
+   - Usage examples
+   - Configuration samples
+
+   ## Best Practices
+   - Coding standards
+   - Design patterns
+   - Performance optimizations
+   - Security considerations
+
+   ## Lessons Learned
+   - Challenges faced
+   - Solutions implemented
+   - Improvements identified
+   - Future considerations
+
+   ## References
+   - Memory entries
+   - Lesson references
+   - External resources
+   - Related documentation
+   ```
+
+### Documentation Requirements
+1. Content Guidelines
+   - Use clear, concise language
+   - Include code snippets with comments
+   - Provide context for decisions
+   - Link to relevant documentation
+   - Include visual aids when helpful
+
+2. Cross-References
+   - Link to @memories.md entries
+   - Reference @lessons-learned.md
+   - Connect to scratchpad tasks
+   - Cite external resources
+
+3. Version Control
+   - Track document versions
+   - Record major updates
+   - Maintain change history
+   - Document contributors
+
+### Update Triggers
+1. Phase Completion
+   - Document all completed features
+   - Record technical decisions
+   - Update cross-references
+   - Verify documentation completeness
+
+2. Major Milestones
+   - Document significant achievements
+   - Update implementation status
+   - Record learned lessons
+   - Review and update best practices
+
+## Examples
+
+<example>
+# Authentication System - Phase 1
+
+## Overview
+- Phase: 1 - Core Authentication
+- Duration: 2024-02-01 to 2024-02-15
+- Team: Auth Team
+- Objectives: Implement OAuth2 and email verification
+
+## Implementation Details
+- OAuth2 provider integration
+- Email verification system
+- Password reset flow
+- Session management
+
+## Technical Decisions
+Decision: Use NextAuth.js
+- Alternatives: Custom OAuth, Passport.js
+- Rationale: Better Next.js integration, active community
+- Impact: Faster development, maintained security
+
+## Code Examples
+```typescript
+// OAuth configuration
+import NextAuth from 'next-auth';
+import GoogleProvider from 'next-auth/providers/google';
+
+export const authOptions = {
+  providers: [
+    GoogleProvider({
+      clientId: process.env.GOOGLE_ID,
+      clientSecret: process.env.GOOGLE_SECRET,
+    }),
+  ],
+  // ... configuration
+};
+```
+
+## Best Practices
+- Implement proper error handling
+- Use TypeScript for type safety
+- Follow security best practices
+- Maintain test coverage
+
+## Lessons Learned
+- Early OAuth testing crucial
+- Need better error messages
+- Consider rate limiting
+- Plan for scaling
+
+## References
+- Memory: [v1.0.0] Auth implementation
+- Lesson: LL001 - OAuth Integration
+- Docs: /api/auth/README.md
+</example>
+
+<example type="invalid">
+# Auth Phase Done
+
+Added login system
+Used some OAuth stuff
+Works fine now
+
+Missing:
+- No structure
+- No technical details
+- No decisions recorded
+- No examples
+- No cross-references
+</example>
+
+<critical>
+- ALWAYS follow documentation structure
+- NEVER skip technical decisions
+- MAINTAIN cross-references
+- INCLUDE code examples
+- DOCUMENT lessons learned
+- UPDATE on phase completion
+- VERIFY documentation completeness
+</critical>

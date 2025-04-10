@@ -1,0 +1,158 @@
+---
+description: Use this as a mandatory context protocol that you always read and based
+globs: 
+alwaysApply: false
+---
+# Project Requirements Enforcement
+
+> Version: 1.0.0
+
+## Context 🎯
+- Ensures consistent project implementation
+- Maintains alignment with project goals
+- Enforces proper documentation
+- Validates technical decisions
+- Supports beginner-friendly development approach
+
+## Requirements 📋
+
+### Documentation Structure
+```markdown
+# Project Name
+## Overview
+- Project description
+- Core goals
+- Target audience
+- Business purpose
+
+## Technical Vision
+- Architecture overview
+- Key technologies
+- Development approach
+```
+
+### Requirements Categories
+
+#### Technical Stack
+- Frontend framework
+- Backend services
+- Database solutions
+- API integrations
+
+#### UI/UX Requirements
+- Design system
+- Responsive breakpoints
+- Accessibility standards
+- User interactions
+
+#### Functionality
+- Core features
+- User flows
+- Business logic
+- Integration points
+
+#### Performance
+- Load time targets
+- Optimization goals
+- Resource limits
+- Caching strategy
+
+#### Security
+- Authentication
+- Authorization
+- Data protection
+- API security
+
+#### SEO & Analytics
+- Meta requirements
+- Tracking needs
+- Performance metrics
+- Search optimization
+
+### Implementation Process
+
+#### Verification Steps
+- Check project information completeness
+- Validate technical requirements
+- Review design requirements
+- Confirm functionality scope
+- Assess security needs
+
+#### Warning System
+```markdown
+⚠️ WARNING: [Category]
+- Missing: [List of missing items]
+- Impact: [Potential issues]
+- Action: [Required steps]
+```
+
+#### Roadmap Management
+- Only create after complete requirements
+- Break down into phases
+- Define clear milestones
+- List systematic approach
+- Order implementation logically
+
+### Beginner-Friendly Considerations
+
+#### Technology Selection
+- Prefer familiar technologies
+- Choose well-documented solutions
+- Consider learning curve
+- Enable AI tool support
+
+#### Implementation Guidance
+- Provide clear examples
+- Include starter templates
+- Document common patterns
+- Reference similar projects
+
+## Examples 💡
+
+### ✅ Good Project Requirements
+```markdown
+# Wedding Memories Blog
+
+## Project Information ✅
+- Digital wedding guestbook with real-time features
+- Photo gallery and memory sharing
+- Interactive guest engagement
+- Mobile-first design
+
+## Requirements ✅
+- Stack: Next.js, Supabase, TailwindCSS
+- Features: Real-time chat, photo upload
+- Security: Guest authentication
+- Performance: < 3s load time
+
+## Roadmap ✅
+1. Phase 1: Basic setup and authentication
+2. Phase 2: Photo gallery implementation
+3. Phase 3: Real-time guestbook
+4. Phase 4: Mobile optimization
+```
+
+### ❌ Invalid Project Requirements
+```markdown
+# New Project
+
+## Stack
+- Use modern tech
+- Add database
+- Make it fast
+
+[Missing project information ❌]
+[Incomplete requirements ❌]
+[No clear roadmap ❌]
+```
+
+## ⚠️ Critical Rules
+- ALWAYS verify project information completeness
+- NEVER create roadmap without full requirements
+- MAINTAIN clear documentation structure
+- ENSURE beginner-friendly approach
+- USE warning system for missing items
+- VALIDATE against user's experience level
+- FOCUS on practical implementation
+- REFERENCE familiar technologies
+- DOCUMENT all decisions and reasons

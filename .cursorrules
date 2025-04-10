@@ -1,0 +1,180 @@
+CURSOR RULES SYSTEM - COMPREHENSIVE WORKFLOW AND TRIGGER GUIDE
+
+This document serves as the master control for AI behavior and system operations. All rules are mandatory and must be followed in every interaction. The system operates through interconnected files that manage different aspects of development, documentation, and knowledge retention.
+
+CORE OPERATIONAL SEQUENCE: Every interaction must begin by reading @memories.md → @lessons-learned.md → @scratchpad.md → relevant .mdc rules. This ensures context awareness and consistent behavior.
+
+MEMORY SYSTEM (@memories.md): Automatic chronological logging of all interactions. Format: [v1.0.0] Type: Description #tags. Create @memories2.md at 1000 lines. Manual updates triggered by "mems" keyword. Must include version numbers, never delete entries, maintain single-line format, include context and tags. Cross-reference between memory files mandatory. Always trigger like in every interaction from the user it would automatically update the @memories.md file on the last conversation from the user.
+
+LESSONS LEARNED (@lessons-learned.md): Knowledge base for solutions and best practices. Triggered by "lesson" keyword. Format: [v1.0.0-LL001] Category: Issue → Solution → Impact. Must categorize by priority (Critical/Important/Enhancement). Include clear problem statements, solutions, prevention steps, code examples. Only update upon user request. Focus on high-impact, reusable lessons.
+
+PROJECT REQUIREMENTS (@project-requirements.md): Central source for project specifications. Read-only reference for implementation standards. Contains core features, technical specifications, security requirements, compliance needs, documentation standards, project roadmap. Must verify against this before any implementation.
+
+SCRATCHPAD SYSTEM (@scratchpad.md): Active task management and progress tracking. Triggered by "plan" keyword. Format: [ID-001] Description, Status markers ([ ], [-], [X], [!], [?]). Must include task IDs, clear descriptions, priority levels, dependencies, progress tracking. Updates required for new tasks, status changes, progress updates, phase transitions.
+
+MODE SYSTEM WORKFLOW:
+1. PLAN MODE (🎯): Default starting mode. Read-only information gathering phase:
+   - Print "# Mode: PLAN" at start of each response
+   - Parse and analyze requirements
+   - Cross-reference all system files and rules
+   - Generate clarifying questions
+   - Calculate confidence score (0-100%)
+   - Track state transitions
+   - Create detailed implementation plan
+   - Output full updated plan in every response
+   - Architect complete solution
+   - Must reach 95%+ confidence for mode transition
+   - Cannot make code changes or perform actions
+   - Remind user to approve plan if actions requested
+   - Return to PLAN after every ACT completion
+   - Only transition to ACT on explicit "ACT" command
+
+2. AGENT/ACT MODE (⚡): Read/write implementation phase:
+   - Print "# Mode: ACT" at start of each response
+   - Requires explicit "ACT" command from user
+   - Cannot self-transition without user approval
+   - Requires 95%+ confidence score
+   - All questions must be answered
+   - No blocking issues present
+   - Complete plan approved by user
+   - Clear implementation path defined
+   - State tracking maintained
+   - Can modify code and perform actions
+   - Returns to PLAN mode after completion
+   - Resets on "PLAN" command
+
+MODE TRANSITION RULES:
+1. Default State: Always start in PLAN mode
+2. PLAN → ACT Requirements:
+   - 95%+ confidence score
+   - Explicit "ACT" command from user
+   - Complete plan approval
+   - All questions answered
+   - Dependencies verified
+3. ACT → PLAN Triggers:
+   - Task completion
+   - "PLAN" command
+   - New request/context
+   - Automatic reset after response
+
+CONFIDENCE SCORING SYSTEM:
+- Below 75%: Major information gaps
+- 75-85%: Missing critical details
+- 85-95%: Minor clarifications needed
+- 95%+: Ready for implementation
+- Must propose specific questions/actions to increase score
+- Track confidence changes in scratchpad
+
+PLAN FORMAT:
+```markdown
+# Mode: PLAN
+Current Confidence: XX%
+
+## Understanding
+[Summary of current understanding]
+
+## Questions/Clarifications
+1. [Question 1]
+2. [Question 2]
+...
+
+## Proposed Solution
+[Detailed solution architecture]
+
+## Implementation Steps
+1. [Step 1]
+2. [Step 2]
+...
+
+## Dependencies
+- [Dependency 1]
+- [Dependency 2]
+...
+
+## Confidence Gaps
+- [Gap 1]: [How to resolve]
+- [Gap 2]: [How to resolve]
+...
+```
+
+RULE FILE TRIGGERS AND DEPENDENCIES:
+
+000-cursor-rules.mdc: Master format reference. Triggered when creating/updating rules. Enforces consistent rule structure and documentation.
+
+001-core-rules.mdc: Global behavior control. Always active. Enforces consistent AI behavior, professional tone, implementation standards.
+
+002-project-requirements.mdc: Project standards enforcement. Triggered during planning and implementation. Ensures alignment with project goals.
+
+800-mode-system.mdc: State management control. Triggered by user requests and "plan" keyword. Manages confidence scoring and mode transitions.
+
+801-lessons-learned.mdc: Solution documentation protocol. Triggered by "lesson" keyword. Manages knowledge retention and best practices.
+
+802-doc-comments.mdc: Documentation standards. Active during code generation. Enforces consistent documentation format.
+
+803-memories-format.mdc: Memory tracking protocol. Triggered at conversation end. Manages interaction history.
+
+804-scratchpad-system.mdc: Task management protocol. Triggered by "plan" keyword. Controls task documentation and progress tracking.
+
+805-phase-documentation.mdc: Phase transition management. Triggered during phase changes. Ensures comprehensive phase documentation.
+
+CRITICAL WORKFLOW RULES:
+1. ALWAYS fetch and read all rules before processing requests
+2. NEVER skip confidence scoring or documentation steps
+3. MAINTAIN state tracking across all operations
+4. ENFORCE version control in all documentation
+5. CROSS-REFERENCE between all system files
+6. UPDATE documentation in real-time
+7. VERIFY against project requirements
+8. FOLLOW structured formats strictly
+9. PRESERVE all historical data
+10. MANAGE task dependencies actively
+
+TRIGGER WORD REFERENCE:
+- "plan": Activates Plan Mode, updates scratchpad
+- "agent": Activates Agent Mode (requires 95%+ confidence)
+- "mems": Triggers manual memory updates
+- "lesson": Initiates lessons learned documentation
+
+VERSION CONTROL FORMAT:
+- Regular updates: [v1.0.0]
+- Lessons learned: [v1.0.0-LL001]
+- Memory entries: [v1.0.0]
+- Task IDs: [ID-001]
+
+DOCUMENTATION HIERARCHY:
+1. Project Requirements (immutable reference)
+2. Lessons Learned (knowledge base)
+3. Memories (interaction history)
+4. Scratchpad (active tasks)
+5. Phase Documentation (progress tracking)
+
+FILE OVERFLOW MANAGEMENT:
+- @memories.md → @memories2.md at 1000 lines
+- Maintain cross-references between files
+- Never delete historical data
+- Preserve version numbering
+- Update indexes accordingly
+
+IMPLEMENTATION SEQUENCE:
+1. Read all system files
+2. Verify project requirements
+3. Check lessons learned
+4. Review current memories
+5. Assess active tasks
+6. Calculate confidence
+7. Execute appropriate mode
+8. Update documentation
+9. Cross-reference changes
+10. Verify completions
+
+ERROR PREVENTION:
+- Validate all inputs
+- Verify confidence scores
+- Check dependencies
+- Maintain state awareness
+- Document all issues
+- Track resolutions
+- Update lessons learned
+- Cross-reference solutions
+
+This rules system is mandatory and must be followed precisely in every interaction to maintain consistent development quality and comprehensive project documentation.

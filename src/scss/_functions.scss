@@ -1,0 +1,113 @@
+$colors-stack: (
+    black: (#000000, #121212, #151515, #4f4942),
+    grey: (#f2f2f2, #838383),
+    white: (#ffffff, #f7f7f7),
+    brown: (#707070, #535353),
+    green: (#81a57F, rgb(111, 145, 111), #d6ddd5, #eceeec),
+    dark-green: (#80a47e, #6e8f6c),
+    purple: (#e72d76, #623989, #8c5db0, #9c2e74),
+    orange: (#db6400, #ffa62b, #f1b247, #b88674, #9b6a59, #d87a5c),
+    blue: (blue, blue)
+);
+
+@use "sass:map";
+@use "sass:list";
+
+$colors-stack: (
+    black: (#000000, #121212, #151515, #4f4942),
+    grey: (#f2f2f2, #838383),
+    white: (#ffffff, #f7f7f7),
+    brown: (#707070, #535353),
+    green: (#81a57F, rgb(111, 145, 111), #d6ddd5, #eceeec),
+    dark-green: (#80a47e, #6e8f6c),
+    purple: (#e72d76, #623989, #8c5db0, #9c2e74),
+    orange: (#db6400, #ffa62b, #f1b247, #b88674, #9b6a59, #d87a5c),
+    blue: (blue, blue)
+);
+
+@function get-color($color-id, $color-tone: 1, $opacity: 1) {
+	$tones-map: map.get($colors-stack, $color-id);
+
+	@if $tones-map == null {
+		@error "Color #{$color-id} doesn't exist in $colors-stack.";
+	}
+
+	@return if($opacity == 1, list.nth($tones-map, $color-tone), rgba(list.nth($tones-map, $color-tone), $opacity));
+}
+
+
+@mixin center() {
+	position: absolute;
+	top: 50%;
+	left: 50%;
+	transform: translate(-50%, -50%);
+}
+
+@mixin svg($width, $height, $color: null, $tone: 1) {
+	width: $width;
+	height: $height;
+	@if $color != null {
+		path, g {
+			fill: color($color, $tone);
+		}
+	}
+}
+
+@mixin svg-fill($color, $color-tone: 1) {
+	path {
+		fill: color($color, $color-tone);
+	}
+}
+
+@mixin font($size, $color, $weight: 300, $line-height: 1.2, $tone: 1) {
+	font-size: $size;
+	color: color($color, $tone);
+	font-weight: $weight;
+	line-height: $line-height;
+}
+
+@mixin size($width, $height: -1) {
+	width: #{$width};
+	height: if($height == -1, #{$width}, #{$height});
+}
+
+@mixin btn($padding-h, $padding-v, $radius, $background: transparent, $border-color: transparent, $bg_tone: 1, $border_tone: 1) {
+	display: inline-block;
+	padding: $padding-h $padding-v;
+	border-radius: $radius;
+
+	@if $background == transparent {
+		background: transparent;
+	} @else {
+		background: color($background, $bg_tone);
+	}
+
+	@if $border-color == transparent {
+		border: 2px solid transparent;
+	} @else {
+		border: 2px solid color($border-color, $border_tone);
+	}
+}
+
+@mixin btn-style($color, $tone: 1) {
+	background: transparent;
+	border-color: color($color, $tone);
+	color: color($color, $tone);
+	
+	&:hover {
+		background: color($color, $tone);
+		border-color: color($color, $tone);
+		@if $color == white {
+			color: color(black) !important;
+		} @else {
+			color: color(white) !important;
+		}
+	}
+}
+
+@mixin placeholder {
+	::-webkit-input-placeholder {@content}
+	:-moz-placeholder           {@content}
+	::-moz-placeholder          {@content}
+	:-ms-input-placeholder      {@content}
+}
