@@ -6,6 +6,14 @@
         <title>Michał Lachowski Front End Developer</title>
         <meta name='viewport' content='width=device-width, initial-scale=1'>
         
+        <!-- Favicons for all devices -->
+        <link rel="icon" type="image/x-icon" href="img/favicon/favicon.ico">
+        <link rel="icon" type="image/png" sizes="16x16" href="img/favicon/favicon-16x16.png">
+        <link rel="icon" type="image/png" sizes="32x32" href="img/favicon/favicon-32x32.png">
+        <link rel="apple-touch-icon" sizes="180x180" href="img/favicon/apple-touch-icon.png">
+        <link rel="manifest" href="img/favicon/site.webmanifest">
+        <meta name="theme-color" content="#ffffff">
+        
         <!-- My stylesheet -->
         <link rel='stylesheet' href='style.css'>   
         <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
@@ -48,6 +56,9 @@
 </video> 
 <div class="overlay"></div>
 
+<!-- Fixed glass background container for all sections except banner -->
+<div class="section-glass-container"></div>
+
 {% include "header-template.html" %} 
 
 {% block content %} {% endblock %}
@@ -58,8 +69,8 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/ScrollTrigger.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollToPlugin.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/Observer.min.js"></script>
+
 <!-- Scripts at the end of body -->
- 
 <script src="js/script.js"></script>
 
 <!-- Persistent UI Elements -->
@@ -83,6 +94,7 @@
 
 <!-- Splitting.js JS -->
 <script src="https://unpkg.com/splitting/dist/splitting.min.js"></script>
+<script src="https://unpkg.com/split-type"></script>
 
 </body> 
 </html>       

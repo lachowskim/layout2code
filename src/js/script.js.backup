@@ -1,0 +1,1282 @@
+/**
+ * Portfolio Site - Main JavaScript
+ * Streamlined version with modular functionality
+ */
+
+// Register GSAP plugins
+gsap.registerPlugin(ScrollTrigger, ScrollToPlugin, Observer);
+
+// ======= CONFIGURATION =======
+const CONFIG = {
+  // Animation settings
+  animation: {
+    duration: 0.5,
+    stagger: 0.05,
+    easeIn: "power2.in",
+    easeOut: "back.out(1.2)",
+    fadeSpeed: 0.85,
+  },
+  glass: { height: '80vh', duration: 0.5 },
+  navigation: {
+    dotPosition: 65,
+    scrollThrottle: 500, // Increased to prevent rapid scrolling
+    wheelSpeed: 5
+  },
+  debug: true // Enable debug logging temporarily
+};
+
+////////////////////////////////////////////////////////////////////////////////
+// ======= HELPER UTILITIES =======
+// Lightweight wrappers that drastically shorten long DOM calls & event binding.
+//  • $q  – single-element query      → const banner = $q('#banner');
+//  • $$q – multi-element NodeList    → $$q('.btn').forEach(...);
+//  • on  – safe addEventListener     → on(btn,'click',fn);
+// These introduce *zero* behavioural change; they simply reduce boilerplate.  
+////////////////////////////////////////////////////////////////////////////////
+const $q  = selector => document.querySelector(selector);
+const $$q = selector => document.querySelectorAll(selector);
+const on  = (el, evt, cb) => el && el.addEventListener(evt, cb);
+
+// ======= DOM ELEMENTS =======
+let sections, sectionCount, currentSection = 0, isAnimating = false, observer = null;
+
+// Direction-aware animation system
+let animationState = {
+  currentDirection: 0, // -1 = up, 1 = down, 0 = none
+  scrollTween: null, // Track the main scroll tween for interruption
+  pendingCallbacks: [] // Track all pending GSAP delayed calls
+};
+
+// Simple debounced scroll system
+let scrollQueue = {
+  pending: null,
+  timeout: null,
+  debounceDelay: 100 // 100ms debounce
+};
+
+// ======= INITIALIZATION =======
+document.addEventListener('DOMContentLoaded', () => {
+  // Initialize Splitting.js
+  if (typeof Splitting === 'function') Splitting();
+  
+  // Short delay to ensure everything is ready
+  setTimeout(initSite, 100);
+});
+
+// jQuery initialization for backward compatibility
+jQuery(document).ready($ => {
+  // Handle preloader if it exists
+  const preloader = $("#preloader");
+  if (!preloader.length) return;
+  
+  const hasSeenPreloader = sessionStorage.getItem('hasSeenPreloader');
+  
+  if (hasSeenPreloader) {
+    preloader.hide();
+  } else {
+    setTimeout(() => {
+      preloader.css({
+        'display': 'flex',
+        'opacity': '1'
+      });
+      
+      gsap.to(preloader[0], {
+        opacity: 0,
+        duration: 1,
+        ease: "power2.out",
+        onComplete: () => preloader.hide()
+      });
+      
+      sessionStorage.setItem('hasSeenPreloader', 'true');
+    }, 100);
+  }
+  
+  // Add mobile menu handlers
+  setupMobileMenu();
+});
+
+// ======= CORE FUNCTIONS =======
+
+/**
+ * Initialize the site
+ */
+function initSite() {
+  sections = gsap.utils.toArray('.section');
+  sectionCount = sections.length;
+  
+  setupNavigation();
+  setupGlassContainer();
+  setupButtonEffects();
+  setupScrollObserver();
+  setupTextAnimations();
+  setupScrollButtonHoverEffects();
+  
+  // Set initial state
+  if (currentSection === 0) {
+    document.body.classList.add('banner-active');
+    // Force remove glass container from banner
+    const glassContainer = document.querySelector('.section-glass-container');
+    if (glassContainer) {
+      gsap.set(glassContainer, {
+        opacity: 0,
+        visibility: "hidden",
+        display: "none"
+      });
+    }
+    // Always animate banner on initial load
+    const bannerSection = document.getElementById('banner');
+    if (bannerSection) animateBannerContent(bannerSection, true);
+  }
+  
+  // Handle hash navigation on page load
+  handleInitialNavigation();
+  
+  // Set initial scroll button visibility based on current section
+  updateScrollButtons();
+  
+  if (CONFIG.debug) logDebugInfo("Site initialized");
+}
+
+/**
+ * Handle initial navigation (e.g., from URL hash)
+ */
+function handleInitialNavigation() {
+  // Check for hash in URL
+  const hash = window.location.hash;
+  if (hash) {
+    const targetSection = document.querySelector(hash);
+    if (targetSection) {
+      const index = sections.indexOf(targetSection);
+      if (index > -1) {
+        setTimeout(() => goToSection(index), 300);
+        return;
+      }
+    }
+  }
+  
+  // If no valid hash or on banner, animate first section
+  if (currentSection === 0) {
+    const bannerSection = document.getElementById('banner');
+    if (bannerSection) animateBannerContent(bannerSection, true);
+  }
+}
+
+/**
+ * Setup navigation dots
+ */
+function setupNavigation() {
+  const dotsContainer = document.querySelector('.section-dots');
+  if (!dotsContainer) return;
+  
+  // Set configurable position
+  document.documentElement.style.setProperty('--dot-nav-right-position', `${CONFIG.navigation.dotPosition}px`);
+  
+  // Clear existing dots
+  dotsContainer.innerHTML = '';
+  
+  // Create dots for each section
+  sections.forEach((section, index) => {
+    if (!section) return;
+    
+    // Create container for dot and label
+    const dotContainer = document.createElement('div');
+    dotContainer.className = 'section-dot-container';
+    
+    // Create dot and label
+    const dot = document.createElement('div');
+    dot.className = 'section-dot';
+    if (index === currentSection) dot.classList.add('active', 'effect-pulse');
+    
+    const label = document.createElement('div');
+    label.className = 'section-dot-label';
+    const sectionId = section.id || `section-${index+1}`;
+    const displayName = section.dataset.name || sectionId.charAt(0).toUpperCase() + sectionId.slice(1);
+    label.textContent = displayName;
+    
+    // Add elements and click event
+    dotContainer.appendChild(label);
+    dotContainer.appendChild(dot);
+    dotContainer.addEventListener('click', () => {
+      if (!isAnimating && index !== currentSection) goToSection(index);
+    });
+    
+    dotsContainer.appendChild(dotContainer);
+  });
+  
+  // Add anchor navigation
+  document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+    anchor.addEventListener('click', e => {
+      e.preventDefault();
+      const targetId = anchor.getAttribute('href');
+      const targetSection = document.querySelector(targetId);
+      
+      if (targetSection) {
+        const index = sections.indexOf(targetSection);
+        if (index > -1) goToSection(index);
+      }
+    });
+  });
+  
+  // Set initial dot state immediately
+  updateNavigation(currentSection, true);
+}
+
+/**
+ * Update the active navigation dot with smooth transition
+ */
+function updateNavigation(targetIndex = currentSection, immediate = false) {
+  const dots = document.querySelectorAll('.section-dot');
+  if (!dots.length) return;
+  
+  // Reset all dots to inactive state
+  dots.forEach(dot => {
+    dot.classList.remove('active', 'effect-pulse');
+    if (immediate) {
+      gsap.set(dot, { scale: 1 });
+    } else {
+      gsap.to(dot, { 
+        scale: 1, 
+        duration: CONFIG.animation.duration * 0.6,
+        ease: "power2.out" 
+      });
+    }
+  });
+  
+  // Animate new active dot
+  if (dots[targetIndex]) {
+    const activeDot = dots[targetIndex];
+    activeDot.classList.add('active', 'effect-pulse');
+    
+    if (immediate) {
+      gsap.set(activeDot, { scale: 1.3 });
+    } else {
+      gsap.to(activeDot, {
+        scale: 1.3,
+        duration: CONFIG.animation.duration,
+        ease: "back.out(1.2)"
+      });
+    }
+  }
+}
+
+/**
+ * Setup GSAP scroll observer with direction-aware interruption
+ */
+function setupScrollObserver() {
+  // Kill existing observer if it exists
+  if (observer) observer.kill();
+  
+  observer = Observer.create({
+    target: window,
+    type: "wheel,touch,pointer",
+    wheelSpeed: CONFIG.navigation.wheelSpeed,
+    preventDefault: true,
+    dragMinimum: 250,
+    tolerance: 10, // Small tolerance to prevent over-sensitivity
+    lockAxis: true,
+    
+    onUp: () => {
+      handleScrollEvent(-1); // Up direction
+    },
+    
+    onDown: () => {
+      handleScrollEvent(1); // Down direction
+    }
+  });
+}
+
+/**
+ * Handle scroll events with direction-aware interruption logic
+ */
+function handleScrollEvent(direction) {
+  if (CONFIG.debug) {
+    console.log(`[SCROLL] Direction: ${direction}, IsAnimating: ${isAnimating}, CurrentDirection: ${animationState.currentDirection}, CurrentSection: ${currentSection}`);
+  }
+  
+  if (isAnimating) {
+    // Check if this is opposite direction to current animation
+    if (animationState.currentDirection !== 0 && direction !== animationState.currentDirection) {
+      // Opposite direction - interrupt and reverse!
+      if (CONFIG.debug) {
+        console.log(`[INTERRUPT] Opposite direction detected! Current: ${animationState.currentDirection}, New: ${direction}`);
+      }
+      interruptAndReverse(direction);
+      return;
+    } else {
+      // Same direction - ignore (let current animation complete)
+      if (CONFIG.debug) {
+        console.log(`[IGNORE] Same direction scroll ignored during animation`);
+      }
+      return;
+    }
+  }
+  
+  // Normal scroll handling when not animating
+  if (direction === -1 && currentSection > 0) {
+    queueScrollDirection(-1);
+  } else if (direction === 1 && currentSection < sectionCount - 1) {
+    queueScrollDirection(1);
+  }
+}
+
+/**
+ * Interrupt current animation and reverse direction smoothly
+ */
+function interruptAndReverse(newDirection) {
+  // Calculate target section for reverse direction from CURRENT position
+  const targetSection = currentSection + newDirection;
+  
+  // Validate target section
+  if (targetSection < 0 || targetSection >= sectionCount) return;
+  
+  // Kill current scroll tween if it exists
+  if (animationState.scrollTween) {
+    animationState.scrollTween.kill();
+    animationState.scrollTween = null;
+  }
+  
+  // Clear any pending scroll queue
+  if (scrollQueue.timeout) {
+    clearTimeout(scrollQueue.timeout);
+    scrollQueue.timeout = null;
+    scrollQueue.pending = null;
+  }
+  
+  // TARGETED CLEANUP: Only kill specific animations, not everything
+  const currentSectionElement = sections[currentSection];
+  if (currentSectionElement) {
+    const elementsToStop = currentSectionElement.querySelectorAll('*');
+    gsap.killTweensOf(elementsToStop);
+  }
+  
+  // CANCEL ALL PENDING DELAYED CALLS that could add headers
+  animationState.pendingCallbacks.forEach(callback => {
+    if (callback) callback.kill();
+  });
+  animationState.pendingCallbacks = [];
+  
+  // ALWAYS do aggressive header cleanup during interruptions
+  clearAllHeaderTitles();
+  
+  // EXTRA AGGRESSIVE header cleanup for banner target
+  if (targetSection === 0) {
+    // Force immediate header cleanup again
+    setTimeout(() => clearAllHeaderTitles(), 5);
+    setTimeout(() => clearAllHeaderTitles(), 20);
+    
+    if (CONFIG.debug) {
+      console.log('[INTERRUPT] Extra aggressive header cleanup for banner target');
+    }
+    
+    // Force banner state immediately
+    document.body.classList.add('banner-active');
+  }
+  
+  // Reset animation state immediately
+  animationState.currentDirection = 0;
+  isAnimating = false;
+  
+  // Start immediate reverse animation from current position
+  setTimeout(() => {
+    goToSection(targetSection, true); // true = isInterrupting
+  }, 10); // Small delay to ensure clean state reset
+}
+
+/**
+ * Queue scroll direction with debouncing
+ */
+function queueScrollDirection(direction) {
+  // If already animating, ignore
+  if (isAnimating) return;
+  
+  // Clear existing timeout
+  if (scrollQueue.timeout) {
+    clearTimeout(scrollQueue.timeout);
+  }
+  
+  // Set the latest direction
+  scrollQueue.pending = direction;
+  
+  // Execute after debounce delay
+  scrollQueue.timeout = setTimeout(() => {
+    if (scrollQueue.pending !== null && !isAnimating) {
+      const targetSection = currentSection + scrollQueue.pending;
+      if (targetSection >= 0 && targetSection < sectionCount) {
+        goToSection(targetSection);
+      }
+      scrollQueue.pending = null;
+      scrollQueue.timeout = null;
+    }
+  }, scrollQueue.debounceDelay);
+}
+
+/**
+ * Navigate to a specific section
+ */
+function goToSection(index, isInterrupting = false) {
+  // Validate index
+  index = Math.max(0, Math.min(index, sectionCount - 1));
+  if (index === currentSection && !isInterrupting) return;
+  
+  // Hide scroll buttons immediately when animation starts
+  hideScrollButtons();
+  
+  // Set animation lock but KEEP observer enabled for interruption detection
+  isAnimating = true;
+  // DO NOT disable observer - we need it for opposite direction detection!
+  
+  // Track animation direction
+  const direction = index > currentSection ? 1 : -1;
+  animationState.currentDirection = direction;
+  
+  // Clear any pending scroll queue
+  if (scrollQueue.timeout) {
+    clearTimeout(scrollQueue.timeout);
+    scrollQueue.timeout = null;
+    scrollQueue.pending = null;
+  }
+  
+  // Store section references
+  const prevIndex = currentSection;
+  const prevSection = sections[prevIndex];
+  const targetSection = sections[index];
+  currentSection = index;
+  
+  // Update navigation immediately
+  updateNavigation(index, false);
+  
+  // Check if target is banner
+  const isBanner = index === 0;
+  
+  // Update body class for banner
+  document.body.classList.toggle('banner-active', isBanner);
+  
+  // IMMEDIATE banner reset if targeting banner - don't wait for callback
+  if (isBanner) {
+    const bannerSection = document.getElementById('banner');
+    if (bannerSection) {
+      resetBannerContent(bannerSection);
+      if (CONFIG.debug) {
+        console.log('[BANNER] Immediate banner reset applied');
+      }
+    }
+  }
+  
+  // Handle glass container
+  if (isBanner) {
+    const glassContainer = document.querySelector('.section-glass-container');
+    if (glassContainer) {
+      gsap.set(glassContainer, {
+        opacity: 0,
+        visibility: "hidden",
+        display: "none",
+        scale: 0
+      });
+    }
+  } else {
+    updateGlassContainer(targetSection, true);
+  }
+  
+  // Handle header title - ALWAYS call this to clear stacked titles
+  updateHeaderTitle(prevIndex, index);
+  
+  // Scroll to target position
+  const targetY = index * window.innerHeight;
+  
+  // Create scroll tween and track it for potential interruption
+  animationState.scrollTween = gsap.to(window, {
+    scrollTo: { y: targetY, autoKill: false },
+    duration: 0.01,
+    ease: 'none',
+    onComplete: () => {
+      // Clear scroll tween reference
+      animationState.scrollTween = null;
+      
+      // Exit animation for previous section - BUT NOT if going to banner
+      if (prevSection && !isBanner) {
+        animateSectionContent(prevSection, false);
+      } else if (isBanner && CONFIG.debug) {
+        console.log('[BANNER] Skipping exit animation when going to banner');
+      }
+      
+      // Entry animation for target section (with small delay)
+      gsap.delayedCall(CONFIG.animation.fadeSpeed * 0.1, () => {
+        if (isBanner) {
+          const bannerSection = document.getElementById('banner');
+          if (bannerSection) {
+            // Banner already reset immediately, just animate
+            if (CONFIG.debug) {
+              console.log('[BANNER] Starting banner animation');
+            }
+            animateBannerContent(bannerSection, isInterrupting);
+          }
+        } else {
+          animateSectionContent(targetSection, true);
+        }
+      });
+      
+      // Final actions after animation completes
+      const finalCallback = gsap.delayedCall(CONFIG.animation.duration * 1.2, () => {
+        updateScrollButtons(); // Show buttons after animation completes
+        addHeaderTitle(index);
+        
+        // Reset animation state - Observer stays enabled!
+        animationState.currentDirection = 0;
+        isAnimating = false;
+        
+        // Remove this callback from tracking
+        const callbackIndex = animationState.pendingCallbacks.indexOf(finalCallback);
+        if (callbackIndex > -1) {
+          animationState.pendingCallbacks.splice(callbackIndex, 1);
+        }
+        
+        if (CONFIG.debug) logDebugInfo(`Navigated to section ${index}`);
+      });
+      
+      // Track the callback so it can be cancelled during interruptions
+      animationState.pendingCallbacks.push(finalCallback);
+    }
+  });
+}
+
+/**
+ * Animate section content in or out
+ */
+function animateSectionContent(section, isEntering) {
+  if (!section) return;
+  
+  const isBanner = section.id === 'banner';
+  
+  // BANNER SECTIONS: Skip entirely - let animateBannerContent() handle it
+  if (isBanner) {
+    if (CONFIG.debug) {
+      console.log('[ANIMATE] Skipping animateSectionContent for banner - dedicated function handles it');
+    }
+    return;
+  }
+  
+  // Select elements to animate for NON-BANNER sections only
+  const selectors = '.headline, .headline h1, .headline h2, .headline p, .headline .btn, .about-wrapper, .portfolio-wrapper, .form-wrapper, .services-wrapper, .flip-cards-container';
+  
+  const elements = section.querySelectorAll(selectors);
+  if (elements.length === 0) return;
+  
+  if (!isEntering) {
+    // Exit animation
+    gsap.to(elements, {
+      opacity: 0,
+      scale: 0.95,
+      duration: CONFIG.animation.duration * CONFIG.animation.fadeSpeed,
+      ease: CONFIG.animation.easeIn,
+      stagger: 0,
+      force3D: true,
+      overwrite: true
+    });
+  } else {
+    // Standard section entry animation (NON-BANNER only)
+    gsap.set(elements, { 
+      opacity: 0, 
+      scale: 0.9, 
+      force3D: true 
+    });
+    
+    gsap.to(elements, {
+      opacity: 1,
+      scale: 1,
+      duration: CONFIG.animation.duration,
+      stagger: CONFIG.animation.stagger,
+      ease: CONFIG.animation.easeOut,
+      force3D: true,
+      overwrite: true
+    });
+  }
+}
+
+/**
+ * Reset banner content to ensure visibility before animation
+ */
+function resetBannerContent(section) {
+  if (!section) return;
+  
+  const headlineWrapper = section.querySelector('.headline-wrapper');
+  const headlineText = section.querySelector('.headline-text');
+  const h1 = section.querySelector('h1');
+  const h2 = section.querySelector('h2');
+  const btn = section.querySelector('.btn');
+  
+  // Force all banner elements to be properly positioned but NOT visible yet
+  const elementsToReset = [headlineWrapper, headlineText, h1, h2, btn].filter(el => el);
+  
+  elementsToReset.forEach(element => {
+    gsap.killTweensOf(element); // Kill any existing animations
+    
+    // Reset positioning and display but DON'T set opacity - let animation handle that
+    gsap.set(element, {
+      visibility: 'visible',
+      display: element === headlineWrapper || element === headlineText ? 'flex' : 'block',
+      scale: 1,
+      y: 0,
+      x: 0,
+      rotation: 0,
+      zIndex: 10,
+      position: 'relative',
+      clearProps: 'opacity,transform', // Clear opacity and transform - let animation set them
+      force3D: false
+    });
+    
+    // Force CSS display but NOT opacity
+    element.style.visibility = 'visible';
+    element.style.display = element === headlineWrapper || element === headlineText ? 'flex' : 'block';
+    // DON'T set element.style.opacity - let GSAP animation handle it
+  });
+  
+  // EXTRA: Force show the parent section too (but not opacity)
+  gsap.set(section, {
+    visibility: 'visible',
+    display: 'flex',
+    // DON'T set opacity here either
+  });
+  
+  // EXTRA: Ensure body has correct banner class
+  document.body.classList.add('banner-active');
+  
+  if (CONFIG.debug) {
+    console.log('[BANNER RESET] Reset positioning without setting opacity - let animation handle it');
+    console.log('[BANNER RESET] Elements found:', elementsToReset.length);
+  }
+}
+
+function animateBannerContent(section, isInitialLoad = false) {
+  if (!section) return;
+
+  const headlineWrapper = section.querySelector('.headline-wrapper');
+  const headlineText = section.querySelector('.headline-text');
+  const h1 = section.querySelector('h1');
+  const h2 = section.querySelector('h2');
+  const btn = section.querySelector('.btn');
+
+  if (!headlineText) return;
+
+  // Ensure the parent containers are visible
+  if (headlineWrapper) {
+    gsap.set(headlineWrapper, {
+      opacity: 1,
+      visibility: 'visible',
+      display: 'flex'
+    });
+  }
+
+  gsap.set(headlineText, {
+    opacity: 1,
+    visibility: 'visible',
+    display: 'flex'
+  });
+
+  // Set initial state for child elements
+  const elementsToAnimate = [h1, h2, btn].filter(el => el);
+  if (elementsToAnimate.length === 0) return;
+
+  // Kill any existing animations on these elements first
+  gsap.killTweensOf(elementsToAnimate);
+
+  // Updated initial state
+  gsap.set(elementsToAnimate, {
+    y: 40,                 // Reduced Y for smoother entrance
+    opacity: 0,
+    scale: 0.95,           // Slight scale reduction for natural feeling
+    force3D: true
+  });
+
+  // Enhanced banner animation
+  gsap.to(elementsToAnimate, {
+    y: 0,
+    opacity: 1,
+    scale: 1,
+    duration: CONFIG.animation.duration * 5, // Slightly longer for elegance
+    stagger: {
+      each: 0.5,
+      from: "start"
+    },
+    ease: "power3.out",    // Changed to smoother easing
+    force3D: true,
+    overwrite: true
+  });
+
+  if (CONFIG.debug) {
+    console.log('[BANNER] Enhanced banner animation triggered.');
+  }
+}
+
+
+/**
+ * Setup glass container
+ */
+function setupGlassContainer() {
+  const glassContainer = document.querySelector('.section-glass-container');
+  if (!glassContainer) return;
+  
+  // Ensure glass container is never in the banner
+  const banner = document.getElementById('banner');
+  if (banner && banner.contains(glassContainer)) {
+    banner.removeChild(glassContainer);
+  }
+  
+  // Move glass container to body if not already there
+  if (!document.body.contains(glassContainer)) {
+    document.body.appendChild(glassContainer);
+  }
+  
+  // Initial state - hide if on banner section
+  if (currentSection === 0) {
+    gsap.set(glassContainer, {
+      opacity: 0,
+      visibility: "hidden", 
+      display: "none",
+      scale: 0
+    });
+  }
+  
+  // Add extra class to reinforce CSS rule
+  document.body.classList.add('glass-container-ready');
+}
+
+/**
+ * Update glass container for section
+ */
+function updateGlassContainer(section, isVisible) {
+  const glassContainer = document.querySelector('.section-glass-container');
+  if (!glassContainer) return;
+  
+  // Kill any existing animations
+  gsap.killTweensOf(glassContainer);
+  
+  // Immediately hide if section is banner
+  if (section && section.id === 'banner') {
+    gsap.set(glassContainer, {
+      opacity: 0,
+      visibility: "hidden",
+      display: "none",
+      scale: 0
+    });
+    return;
+  }
+  
+  if (!isVisible) {
+    // Hide container
+    gsap.to(glassContainer, {
+      opacity: 0,
+      scale: 0.95,
+      duration: CONFIG.glass.duration,
+      ease: "power2.in",
+      onComplete: () => {
+        gsap.set(glassContainer, {
+          visibility: "hidden",
+          display: "none"
+        });
+      }
+    });
+  } else {
+    // Show container - but never for banner
+    if (section && section.id !== 'banner') {
+      gsap.set(glassContainer, {
+        visibility: "visible",
+        display: "block",
+        height: CONFIG.glass.height,
+        opacity: 0,
+        scale: 0.98
+      });
+      
+      gsap.to(glassContainer, {
+        opacity: 1,
+        scale: 1,
+        duration: CONFIG.glass.duration,
+        ease: "back.out(1.02)"
+      });
+    }
+  }
+}
+
+/**
+ * Aggressively clear all header titles and reset header state
+ */
+function clearAllHeaderTitles() {
+  const titleContainer = document.getElementById('dynamic-header-title-container');
+  
+  if (titleContainer) {
+    // Kill all animations on title container and its children
+    gsap.killTweensOf(titleContainer);
+    gsap.killTweensOf(titleContainer.children);
+    
+    // Remove all existing titles - multiple methods for safety
+    const existingTitles = titleContainer.querySelectorAll('.header-dynamic-title');
+    existingTitles.forEach(title => {
+      gsap.killTweensOf(title);
+      title.remove();
+    });
+    
+    // EXTRA: Clear by class name
+    const titlesByClass = document.querySelectorAll('.header-dynamic-title');
+    titlesByClass.forEach(title => {
+      if (title.parentNode) title.parentNode.removeChild(title);
+    });
+    
+    // Clear any remaining content - multiple methods
+    titleContainer.innerHTML = '';
+    titleContainer.textContent = '';
+    
+    // Force reset container styles
+    gsap.set(titleContainer, {
+      clearProps: 'all'
+    });
+    
+    if (CONFIG.debug) {
+      console.log('[HEADER] EXTREMELY aggressive header cleanup completed');
+      console.log('[HEADER] Remaining children:', titleContainer.children.length);
+    }
+  }
+  
+  // DON'T reset arrow here - let addHeaderTitle handle arrow animations properly
+}
+
+/**
+ * Update header title when changing sections - ONLY HANDLES EXIT
+ */
+function updateHeaderTitle(prevIndex, currentIndex) {
+  // ALWAYS do aggressive cleanup first
+  clearAllHeaderTitles();
+  
+  if (CONFIG.debug) {
+    console.log(`[HEADER] Header transition: ${prevIndex} → ${currentIndex}`);
+  }
+}
+
+/**
+ * Add new header title - ENTER ANIMATION ONLY (called after section transition)
+ */
+function addHeaderTitle(sectionIndex) {
+  const titleContainer = document.getElementById('dynamic-header-title-container');
+  const headerArrow = document.getElementById('arrowGroup');
+  if (!titleContainer) return;
+  
+  // SAFETY CHECK: Don't add headers if banner is active
+  if (document.body.classList.contains('banner-active') || sectionIndex === 0) {
+    if (CONFIG.debug) {
+      console.log('[HEADER] Skipping header addition - banner is active');
+    }
+    
+    // Just handle arrow for banner
+    if (headerArrow) {
+      gsap.to(headerArrow, {
+        rotation: 0,
+        duration: 0.4,
+        ease: 'power2.inOut'
+      });
+    }
+    return;
+  }
+  
+  // SAFETY CHECK: Make sure container is actually empty
+  const existingTitles = titleContainer.querySelectorAll('.header-dynamic-title');
+  if (existingTitles.length > 0) {
+    if (CONFIG.debug) {
+      console.log('[HEADER] WARNING: Found existing titles during add, clearing first');
+    }
+    clearAllHeaderTitles();
+  }
+  
+  const hasHeader = sectionIndex !== 0 && sectionIndex !== sectionCount - 1;
+  
+  if (hasHeader) {
+    const section = sections[sectionIndex];
+    if (!section) return;
+    
+    const originalH1 = section.querySelector('.headline h1');
+    if (originalH1) {
+      const newTitle = document.createElement('h1');
+      newTitle.className = 'header-dynamic-title';
+      newTitle.textContent = originalH1.textContent;
+      newTitle.style.color = '#FFFFFF';
+      
+      titleContainer.appendChild(newTitle);
+      
+      // Set initial position (off-screen LEFT)
+      gsap.set(newTitle, {
+        autoAlpha: 0,
+        xPercent: -100, // Start from LEFT
+        transformOrigin: 'left center'
+      });
+      
+      // Animate to final position (ENTER from LEFT)
+      gsap.to(newTitle, {
+        autoAlpha: 1,
+        xPercent: 0, // End at normal position
+        duration: 0.4,
+        ease: 'back.out(1.2)',
+        onStart: () => {
+          // Rotate arrow if needed - RESTORED ORIGINAL WORKING LOGIC
+          if (headerArrow) {
+            gsap.to(headerArrow, {
+              rotation: -135,
+              duration: 0.3,
+              ease: 'back.out(1.2)'
+            });
+          }
+        }
+      });
+      
+      if (CONFIG.debug) {
+        console.log(`[HEADER] Added header: "${newTitle.textContent}"`);
+      }
+    }
+  } else {
+    // No header for this section (banner or form) - rotate arrow back to 0
+    if (headerArrow) {
+      gsap.to(headerArrow, {
+        rotation: 0,
+        duration: 0.4,
+        ease: 'power2.inOut'
+      });
+    }
+  }
+}
+
+/**
+ * Hide scroll buttons smoothly when animation starts
+ */
+function hideScrollButtons() {
+  const scrollUpBtn   = $q(".scroll-up");
+  const scrollDownBtn = $q(".scroll-down");
+  
+  if (!scrollUpBtn || !scrollDownBtn) return;
+  
+  // Hide both buttons smoothly
+  gsap.to([scrollUpBtn, scrollDownBtn], {
+    duration: 0.2, // Faster fade out when starting animation
+    opacity: 0,
+    ease: "power2.out",
+    onComplete: () => {
+      scrollUpBtn.style.visibility = "hidden";
+      scrollDownBtn.style.visibility = "hidden";
+    }
+  });
+}
+
+/**
+ * Update scroll buttons visibility
+ */
+function updateScrollButtons() {
+  const scrollUpBtn   = $q(".scroll-up");
+  const scrollDownBtn = $q(".scroll-down");
+  
+  if (!scrollUpBtn || !scrollDownBtn) return;
+  
+  // On banner (first section): only show scroll down
+  if (currentSection === 0) {
+    gsap.to(scrollUpBtn, {
+      duration: 0.3,
+      opacity: 0,
+      ease: "power2.out",
+      onComplete: () => scrollUpBtn.style.visibility = "hidden"
+    });
+    
+    gsap.to(scrollDownBtn, {
+      duration: 0.3,
+      opacity: 1,
+      ease: "power2.out",
+      onStart: () => scrollDownBtn.style.visibility = "visible"
+    });
+  }
+  // On form (last section): only show scroll up
+  else if (currentSection === sectionCount - 1) {
+    gsap.to(scrollUpBtn, {
+      duration: 0.3,
+      opacity: 1,
+      ease: "power2.out",
+      onStart: () => scrollUpBtn.style.visibility = "visible"
+    });
+    
+    gsap.to(scrollDownBtn, {
+      duration: 0.3,
+      opacity: 0,
+      ease: "power2.out",
+      onComplete: () => scrollDownBtn.style.visibility = "hidden"
+    });
+  }
+  // Middle sections: hide both
+  else {
+    gsap.to([scrollUpBtn, scrollDownBtn], {
+      duration: 0.3,
+      opacity: 0,
+      ease: "power2.out",
+      onComplete: () => {
+        scrollUpBtn.style.visibility = "hidden";
+        scrollDownBtn.style.visibility = "hidden";
+      }
+    });
+  }
+}
+
+/**
+ * Setup button hover effects
+ */
+function setupButtonEffects() {
+  document.querySelectorAll('.btn').forEach(button => {
+    button.addEventListener('mouseenter', e => {
+      button.classList.remove('radial-hover');
+      
+      const rect = button.getBoundingClientRect();
+      const x = ((e.clientX - rect.left) / rect.width) * 100;
+      const y = ((e.clientY - rect.top) / rect.height) * 100;
+      
+      button.style.setProperty('--x', `${x}%`);
+      button.style.setProperty('--y', `${y}%`);
+      button.classList.add('radial-hover');
+    });
+    
+    button.addEventListener('mousemove', e => {
+      const rect = button.getBoundingClientRect();
+      const x = ((e.clientX - rect.left) / rect.width) * 100;
+      const y = ((e.clientY - rect.top) / rect.height) * 100;
+      
+      button.style.setProperty('--x', `${x}%`);
+      button.style.setProperty('--y', `${y}%`);
+    });
+    
+    button.addEventListener('mouseleave', () => {
+      button.classList.remove('radial-hover');
+    });
+  });
+}
+
+/**
+ * Setup mobile menu
+ */
+function setupMobileMenu() {
+  const burgerIcon = document.getElementById('burgerIcon');
+  const menu = document.querySelector('.menu-wrapper ul.menu');
+  const menuOverlay = document.getElementById('menuOverlay');
+  
+  if (!burgerIcon || !menu || !menuOverlay) return;
+  
+  burgerIcon.addEventListener('click', () => {
+    menu.classList.toggle('active');
+    menuOverlay.classList.toggle('active');
+    burgerIcon.classList.toggle('active');
+  });
+  
+  menuOverlay.addEventListener('click', () => {
+    menu.classList.remove('active');
+    menuOverlay.classList.remove('active');
+    burgerIcon.classList.remove('active');
+  });
+  
+  menu.querySelectorAll('a').forEach(link => {
+    link.addEventListener('click', () => {
+      menu.classList.remove('active');
+      menuOverlay.classList.remove('active');
+      burgerIcon.classList.remove('active');
+    });
+  });
+}
+
+/**
+ * Setup text animations (Splitting.js)
+ */
+function setupTextAnimations() {
+  // Ensure Splitting.js is loaded
+  if (typeof Splitting !== 'function') return;
+  
+  // "Hi" Letter 'i' Flip Animation
+  const hiElement = document.querySelector('.headline h1[data-splitting]');
+  if (hiElement) {
+    const iCharSpan = hiElement.querySelector('.char[style*="--char-index:1"]');
+    if (iCharSpan) {
+      gsap.set(iCharSpan, { transformOrigin: "center center", transformPerspective: 400 });
+      
+      hiElement.addEventListener('mouseenter', () => {
+        gsap.to(iCharSpan, {
+          rotationY: "+=1080",
+          duration: 0.7,
+          ease: "elastic.out(1, 0.5)",
+          overwrite: 'auto'
+        });
+      });
+    }
+  }
+  
+  // "Life" Pulse Animation
+  document.querySelectorAll('[data-splitting][data-life-pulse]').forEach(element => {
+    const lifeWord = element.querySelector('.word[data-word="life"]');
+    if (!lifeWord) return;
+    
+    const chars = lifeWord.querySelectorAll('.char');
+    if (!chars.length) return;
+    
+    gsap.set(chars, { transformOrigin: "center center" });
+    
+    const timeline = gsap.timeline({ paused: true, repeat: -1 });
+    timeline.to(chars, {
+      scale: 1.05,
+      duration: 0.15,
+      stagger: 0.05,
+      ease: "power2.inOut",
+      yoyo: true,
+      repeat: 1
+    });
+    
+    lifeWord.addEventListener('mouseenter', () => timeline.play());
+    lifeWord.addEventListener('mouseleave', () => {
+      timeline.pause().progress(0);
+      gsap.set(chars, { scale: 1 });
+    });
+  });
+}
+
+/**
+ * Setup scroll button hover effects - BULLETPROOF VERSION
+ */
+function setupScrollButtonHoverEffects() {
+  const scrollDownBtn = document.querySelector('.scroll-down');
+  const scrollUpBtn = document.querySelector('.scroll-up');
+  const scrollDownArrow = document.querySelector('.scroll-down .scroll-btn-arrow');
+  const scrollUpArrow = document.querySelector('.scroll-up .scroll-btn-arrow');
+  
+  if (!scrollDownBtn || !scrollUpBtn || !scrollDownArrow || !scrollUpArrow) return;
+  
+  console.log('[SCROLL HOVER] BULLETPROOF setup starting');
+  
+  // NUCLEAR OPTION: Kill ALL animations on these elements
+  gsap.killTweensOf([scrollDownArrow, scrollUpArrow]);
+  
+  // Disable ALL CSS
+  gsap.set([scrollDownArrow, scrollUpArrow], {
+    transition: "none",
+    animation: "none"
+  });
+  
+  scrollDownArrow.style.animation = 'none';
+  scrollUpArrow.style.animation = 'none';
+  scrollDownArrow.style.transition = 'none';
+  scrollUpArrow.style.transition = 'none';
+  
+  // Set base positions
+  gsap.set(scrollDownArrow, {
+    transform: "translate(-50%, -50%) translateY(35px)"
+  });
+  
+  gsap.set(scrollUpArrow, {
+    transform: "translate(-50%, -50%) translateY(-35px) rotate(180deg)"
+  });
+  
+  // Global timeline references - OUTSIDE event handlers
+  let downTimeline = null;
+  let upTimeline = null;
+  
+  // SCROLL DOWN
+  scrollDownBtn.addEventListener('mouseenter', () => {
+    console.log('[DOWN] ENTER');
+    
+    // NUCLEAR KILL everything first
+    gsap.killTweensOf(scrollDownArrow);
+    if (downTimeline) {
+      downTimeline.kill();
+      downTimeline = null;
+    }
+    
+    // Create new timeline
+    downTimeline = gsap.timeline({ repeat: -1, yoyo: true });
+    downTimeline.to(scrollDownArrow, {
+      transform: "translate(-50%, -50%) translateY(30px)",
+      duration: 0.5,
+      ease: "power2.inOut"
+    }).to(scrollDownArrow, {
+      transform: "translate(-50%, -50%) translateY(35px)",
+      duration: 0.5,
+      ease: "power2.inOut"
+    });
+  });
+  
+  scrollDownBtn.addEventListener('mouseleave', () => {
+    console.log('[DOWN] LEAVE');
+    
+    // NUCLEAR KILL everything
+    gsap.killTweensOf(scrollDownArrow);
+    if (downTimeline) {
+      downTimeline.kill();
+      downTimeline = null;
+    }
+    
+    // Return to base
+    gsap.to(scrollDownArrow, {
+      transform: "translate(-50%, -50%) translateY(35px)",
+      duration: 0.4,
+      ease: "power2.out",
+      overwrite: true
+    });
+  });
+  
+  // SCROLL UP
+  scrollUpBtn.addEventListener('mouseenter', () => {
+    console.log('[UP] ENTER');
+    
+    // NUCLEAR KILL everything first
+    gsap.killTweensOf(scrollUpArrow);
+    if (upTimeline) {
+      upTimeline.kill();
+      upTimeline = null;
+    }
+    
+    // Create new timeline
+    upTimeline = gsap.timeline({ repeat: -1, yoyo: true });
+    upTimeline.to(scrollUpArrow, {
+      transform: "translate(-50%, -50%) translateY(-30px) rotate(180deg)",
+      duration: 0.5,
+      ease: "power2.inOut"
+    }).to(scrollUpArrow, {
+      transform: "translate(-50%, -50%) translateY(-25px) rotate(180deg)",
+      duration: 0.5,
+      ease: "power2.inOut"
+    });
+  });
+  
+  scrollUpBtn.addEventListener('mouseleave', () => {
+    console.log('[UP] LEAVE');
+    
+    // NUCLEAR KILL everything
+    gsap.killTweensOf(scrollUpArrow);
+    if (upTimeline) {
+      upTimeline.kill();
+      upTimeline = null;
+    }
+    
+    // Return to base
+    gsap.to(scrollUpArrow, {
+      transform: "translate(-50%, -50%) translateY(-35px) rotate(180deg)",
+      duration: 0.4,
+      ease: "power2.out",
+      overwrite: true
+    });
+  });
+  
+  console.log('[SCROLL HOVER] BULLETPROOF setup complete');
+}
+
+/**
+ * Log debug information
+ */
+function logDebugInfo(message) {
+  if (!CONFIG.debug) return;
+  console.log(`[DEBUG] ${message}`);
+}
+
+// ======= PUBLIC API =======
+window.setAnimation = style => `Animation style set to: ${style}`;
+window.setFadeSpeed = speed => {
+  CONFIG.animation.fadeSpeed = Math.max(0.1, Math.min(speed, 1));
+  return `Fade speed set to: ${CONFIG.animation.fadeSpeed}`;
+};
+window.toggleDebug = () => {
+  CONFIG.debug = !CONFIG.debug;
+  return `Debug mode: ${CONFIG.debug ? 'on' : 'off'}`;
+};
+
