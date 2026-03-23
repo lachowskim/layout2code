@@ -11,47 +11,24 @@
         <link rel="icon" type="image/png" sizes="16x16" href="img/favicon/favicon-16x16.png">
         <link rel="icon" type="image/png" sizes="32x32" href="img/favicon/favicon-32x32.png">
         <link rel="apple-touch-icon" sizes="180x180" href="img/favicon/apple-touch-icon.png">
-        <link rel="manifest" href="img/favicon/site.webmanifest">
         <meta name="theme-color" content="#ffffff">
         
         <!-- My stylesheet -->
         <link rel='stylesheet' href='style.css'>   
-        <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 
         <!-- Font Awesome for icons -->
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
 
-        <!-- Splitting.js CSS -->
-        <link rel="stylesheet" href="https://unpkg.com/splitting/dist/splitting.css" />
-
         <!-- Swiper's stylesheet 
         <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@8/swiper-bundle.min.css"/> 
         -->
-        
-        <!-- LiveServer reload fix script - run before anything else -->
-        <script>
-            // Clear any reload flags that might be causing issues
-            try {
-                sessionStorage.removeItem('isReloading');
-                console.log("🛠️ Anti-reload loop protection active");
-            } catch (e) {
-                console.error("Failed to clear sessionStorage:", e);
-            }
-            
-            // Create global helper
-            window.fixReload = function() {
-                console.log("🔄 Applying reload fix...");
-                sessionStorage.clear();
-                return "Session storage cleared - try refreshing now";
-            };
-        </script>
     </head>
 <body> 
 <!-- Preloader -->
 <div id="preloader"></div>
 
-<video autoplay muted loop id="bg-video">
-    <source src="4K.mp4" type="video/mp4"> 
+<video autoplay muted loop playsinline id="bg-video" preload="metadata">
+    <source src="4K.mp4" type="video/mp4">
     Your browser does not support HTML5 video.
 </video> 
 <div class="overlay"></div>
@@ -71,6 +48,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/Observer.min.js"></script>
 
 <!-- Scripts at the end of body -->
+<script src="js/i18n.js"></script>
 <script src="js/script.js"></script>
 
 <!-- Persistent UI Elements -->
@@ -88,13 +66,18 @@
     <a href="#banner" class="scroll-btn"><img src="img/scroll-btn.png"></a>  
     <a href="#banner" class="scroll-btn-arrow"><img src="img/scroll-btn-arrow.png"></a> 
 </div>
+<button id="language-toggle" class="language-toggle" type="button" aria-label="Switch language">
+    <span class="language-toggle-label">PL</span>
+</button>
 
 <!-- Section Dot Navigation -->
 <div class="section-dots"></div>
 
-<!-- Splitting.js JS -->
-<script src="https://unpkg.com/splitting/dist/splitting.min.js"></script>
-<script src="https://unpkg.com/split-type"></script>
+<!-- Scroll Toast Notification (Desktop Only) -->
+<div id="scroll-toast" class="scroll-toast">
+  <span class="scroll-toast-icon"></span>
+  <span class="scroll-toast-text"></span>
+</div>
 
 </body> 
 </html>       

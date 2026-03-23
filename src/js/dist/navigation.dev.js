@@ -13,22 +13,26 @@
    */
 
   function setupNavigation(sections, currentSection, goToSection, CONFIG) {
-    console.log('[NAVIGATION SETUP] setupNavigation called with', sections.length, 'sections');
+    window.log('navigationSetup', '[NAVIGATION SETUP] setupNavigation called with', sections.length, 'sections');
     var dotsContainer = document.querySelector('.section-dots');
-    console.log('[NAVIGATION SETUP] Found .section-dots container:', !!dotsContainer);
+    window.log('navigationSetup', '[NAVIGATION SETUP] Found .section-dots container:', !!dotsContainer);
 
     if (!dotsContainer) {
       console.error('[NAVIGATION SETUP] ERROR: .section-dots container not found in DOM!');
       return;
-    } // Set configurable position
+    }
 
+    var servicesIndex = sections.findIndex(function (s) {
+      return s && s.id === 'services';
+    });
+    window.Portfolio.servicesSectionIndex = servicesIndex >= 0 ? servicesIndex : -1; // Set configurable position
 
     document.documentElement.style.setProperty('--dot-nav-right-position', "".concat(CONFIG.navigation.dotPosition, "px")); // Clear existing dots
 
     dotsContainer.innerHTML = '';
-    console.log('[NAVIGATION SETUP] Cleared existing dots'); // Create dots for each section
+    window.log('navigationSetup', '[NAVIGATION SETUP] Cleared existing dots'); // Create dots for each section
 
-    console.log('[NAVIGATION SETUP] Creating dots for', sections.length, 'sections');
+    window.log('navigationSetup', '[NAVIGATION SETUP] Creating dots for', sections.length, 'sections');
     sections.forEach(function (section, index) {
       if (!section) return; // Create container for dot and label
 
@@ -53,9 +57,9 @@
         }
       });
       dotsContainer.appendChild(dotContainer);
-      console.log('[NAVIGATION SETUP] Created dot', index, 'for section', section.id);
+      window.log('navigationSetup', '[NAVIGATION SETUP] Created dot', index, 'for section', section.id);
     });
-    console.log('[NAVIGATION SETUP] Created', dotsContainer.children.length, 'total dots'); // Add anchor navigation
+    window.log('navigationSetup', '[NAVIGATION SETUP] Created', dotsContainer.children.length, 'total dots'); // Add anchor navigation
 
     document.querySelectorAll('a[href^="#"]').forEach(function (anchor) {
       anchor.addEventListener('click', function (e) {
@@ -70,7 +74,86 @@
       });
     }); // Set initial dot state immediately
 
-    updateNavigation(currentSection, true, CONFIG);
+    updateNavigation(currentSection, true, CONFIG); // Plan B (mobile only): Throttle resize to avoid layout thrash (150ms)
+
+    var resizeRaf = null;
+    var resizeTimeout = null;
+    var RESIZE_THROTTLE_MS = 150;
+    var mobileMatch = window.matchMedia && window.matchMedia('(max-width: 768px)');
+    window.addEventListener('resize', function () {
+      if (mobileMatch && !mobileMatch.matches) {
+        if (resizeRaf) cancelAnimationFrame(resizeRaf);
+        resizeRaf = null;
+        if (resizeTimeout) clearTimeout(resizeTimeout);
+        resizeTimeout = null;
+        resizeRaf = requestAnimationFrame(function () {
+          resizeRaf = null;
+          var activeIndex = typeof window.currentSection === 'number' ? window.currentSection : -1;
+
+          if (activeIndex === window.Portfolio.servicesSectionIndex) {
+            alignSectionDotsWithServices(activeIndex);
+          }
+        });
+        return;
+      }
+
+      if (!mobileMatch || !mobileMatch.matches) return;
+      if (resizeTimeout) return;
+      if (resizeRaf) cancelAnimationFrame(resizeRaf);
+      resizeRaf = requestAnimationFrame(function () {
+        resizeRaf = null;
+        resizeTimeout = setTimeout(function () {
+          resizeTimeout = null;
+          var activeIndex = typeof window.currentSection === 'number' ? window.currentSection : -1;
+
+          if (activeIndex === window.Portfolio.servicesSectionIndex) {
+            alignSectionDotsWithServices(activeIndex);
+          }
+        }, RESIZE_THROTTLE_MS);
+      });
+    });
+  }
+  /**
+   * Align section-dots so the middle dot (Services) lines up with the "+" of the middle service card.
+   * Sets --section-dots-y-offset on :root when on Services section; clears it otherwise.
+   * Runs measure after layout (double rAF + short delay) so section is in final position.
+   */
+
+
+  function alignSectionDotsWithServices(targetIndex) {
+    var servicesIndex = window.Portfolio.servicesSectionIndex;
+    var root = document.documentElement;
+
+    if (servicesIndex < 0 || targetIndex !== servicesIndex) {
+      root.style.setProperty('--section-dots-y-offset', '0px');
+      return;
+    }
+
+    function measureAndApply() {
+      var middleHeader = document.querySelector('#services .service-categories-grid .service-category:nth-child(2) .category-header');
+      var dotsContainer = document.querySelector('.section-dots');
+      var middleDotContainer = dotsContainer && dotsContainer.children[servicesIndex];
+      var middleDot = middleDotContainer && middleDotContainer.querySelector('.section-dot');
+
+      if (!middleHeader || !middleDot) {
+        root.style.setProperty('--section-dots-y-offset', '0px');
+        return;
+      }
+
+      var hr = middleHeader.getBoundingClientRect();
+      var dr = middleDot.getBoundingClientRect();
+      var headerCenterY = hr.top + hr.height / 2;
+      var dotCenterY = dr.top + dr.height / 2;
+      var offsetPx = headerCenterY - dotCenterY;
+      root.style.setProperty('--section-dots-y-offset', "".concat(offsetPx, "px"));
+    }
+
+    requestAnimationFrame(function () {
+      requestAnimationFrame(function () {
+        measureAndApply();
+        setTimeout(measureAndApply, 350);
+      });
+    });
   }
   /**
    * Update the active navigation dot with smooth transition
@@ -130,7 +213,13 @@
     if (!dots.length) return; // Use global CONFIG as fallback if not provided
 
     var config = CONFIG || window.CONFIG;
-    console.log("[NAV DOTS #".concat(transactionId, "] Immediate state update to section ").concat(targetIndex)); // 🚀 PRIORITY 3: Update state IMMEDIATELY (synchronous)
+    window.log('navigationDots', "[NAV DOTS #".concat(transactionId, "] Immediate state update to section ").concat(targetIndex));
+    var servicesIndex = window.Portfolio.servicesSectionIndex;
+
+    if (targetIndex !== servicesIndex) {
+      document.documentElement.style.setProperty('--section-dots-y-offset', '0px');
+    } // 🚀 PRIORITY 3: Update state IMMEDIATELY (synchronous)
+
 
     dots.forEach(function (dot, index) {
       if (index === targetIndex) {
@@ -141,9 +230,13 @@
     }); // 🚀 Async visual transition (non-blocking)
 
     requestAnimationFrame(function () {
-      // 🚀 Validate transaction before animating
+      if (targetIndex === servicesIndex) {
+        alignSectionDotsWithServices(targetIndex);
+      } // Validate transaction before animating
+
+
       if (transactionId && window.Portfolio.scroll && transactionId !== window.Portfolio.scroll.getCurrentTransactionId()) {
-        console.log("[NAV DOTS #".concat(transactionId, "] Visual animation cancelled - transaction invalidated"));
+        window.log('navigationDots', "[NAV DOTS #".concat(transactionId, "] Visual animation cancelled - transaction invalidated"));
         return;
       } // Animate inactive dots
 
@@ -168,7 +261,7 @@
         });
       }
 
-      console.log("[NAV DOTS #".concat(transactionId, "] Visual animation completed"));
+      window.log('navigationDots', "[NAV DOTS #".concat(transactionId, "] Visual animation completed"));
     });
   }
   /**
@@ -210,6 +303,6 @@
   };
 
   if (window.Portfolio.debug) {
-    console.log('[NAVIGATION] Module loaded successfully with Priority 3 immediate updates');
+    window.log('initialization', '[NAVIGATION] Module loaded successfully with Priority 3 immediate updates');
   }
 })();

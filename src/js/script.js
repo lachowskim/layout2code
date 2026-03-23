@@ -17,7 +17,7 @@ const CONFIG = {
     fadeSpeed: 0.8,  // 📌 Fade speed multiplier
   },
   glass: { 
-    height: '60vh', 
+    height: '650px', 
     duration: 0.5  // 📌 Glass container animation duration
   },
   navigation: {
@@ -30,6 +30,68 @@ const CONFIG = {
     initialDelay: 2.5, // seconds - delay before showing on banner
     showDuration: 0.3, // animation duration for appearance
     showEase: "power2.inOut"
+  },
+  // Services section accordion settings
+  services: {
+    autoExpandOnEntry: true,        // Enable/disable auto-expansion on section entry
+    
+    // ========== TIMING SETTINGS ==========
+    startDelay: 0,                // Delay before first card starts appearing (ms)
+    expansionDelay: 400,            // Delay between each card appearing (ms)
+    
+    // ========== CONTAINER ANIMATION SETTINGS ==========
+    // Animation when the card container itself appears
+    containerAnimation: {
+      duration: 0.5,                // How long the container takes to appear (seconds)
+      ease: 'back.out(1.7)',        // Easing function (back.out creates slight overshoot)
+      // Initial state (where animation starts from):
+      from: {
+        opacity: 0,                 // Start invisible
+        scale: 0.9,                 // Start slightly smaller (0.9 = 90% size)
+        y: 20                       // Start 20px below final position
+      },
+      // Final state (where animation ends):
+      to: {
+        opacity: 1,                 // End fully visible
+        scale: 1,                   // End at normal size
+        y: 0                        // End at final position
+      }
+    },
+    
+    // ========== CONTENT ANIMATION SETTINGS ==========
+    // Animation for service items inside the accordion (after container appears)
+    contentAnimation: {
+      delayAfterContainer: 0.1,     // Delay after container appears before content starts (seconds)
+      itemDuration: 0.4,            // Duration for each service item (seconds)
+      itemStagger: 0.18,            // Delay between each service item appearing (seconds)
+      itemEase: 'power2.out(1.2)',    // Easing for service items
+      // Initial state for service items:
+      itemFrom: {
+        opacity: 0,
+        y: 20                       // Items start 20px below
+      },
+      // Final state for service items:
+      itemTo: {
+        opacity: 1,
+        y: 0
+      }
+    },
+    
+    // ========== CTA BUTTON ANIMATION SETTINGS ==========
+    // Animation for the "Start Your Project →" button
+    ctaAnimation: {
+      delay: 0.9,                   // Delay after content starts (seconds)
+      duration: 0.3,                // Button animation duration (seconds)
+      ease: 'power2.out',           // Easing for button
+      from: {
+        opacity: 0,
+        y: 10                       // Button starts 10px below
+      },
+      to: {
+        opacity: 1,
+        y: 0
+      }
+    }
   },
   // 🚀 ENHANCED: Advanced Animation Interruption System
   interruption: {
@@ -69,13 +131,67 @@ const CONFIG = {
     enableTransactionValidation: true, // Prevent race conditions
     cancelPendingOnInterrupt: true,    // Kill all pending animations on interrupt
     
-    // Debug settings
-    debug: true, // Enable interruption-specific debug logging
-    logTransactionIds: true // Log transaction IDs in console
+    // Debug settings (set true only when debugging scroll/interruption)
+    debug: false,
+    logTransactionIds: false
+  },
+  
+  // 🆕 SCROLL TOAST MESSAGE SYSTEM (Desktop Only)
+  // ============================================================================
+  // Shows "Not so fast?" message when user attempts rapid scrolling
+  // Customizable text, icon, and timing
+  // ============================================================================
+  scrollMessage: {
+    enabled: true,                // Toggle feature on/off
+    minScrollsToTrigger: 5,       // Show after X burst scrolls in a row
+    message: "Not too fast?",      // Customizable message text
+    icon: "",                     // Icon (emoji or leave empty: "")
+                                   // Examples: "⚡" "🚀" "⏸️" "🛑" or ""
+    duration: 2000,                // ms - how long message stays visible
+    cooldown: 3000,                // ms - prevent message spam (time before can show again)
+    slideDistance: 400,            // px - distance to slide in from right
+    animationDuration: 0.4,        // seconds - slide-in animation speed
+    ease: 'power2.out',            // GSAP easing function
+    desktopOnly: true              // Hide on mobile/tablet (recommended: true)
   },
   
   // Global debug flag
   debug: true
+};
+
+// ======= CONSOLE LOGGING CONTROL =======
+// All categories off by default for clean console. To enable in browser console:
+//   window.DEBUG.scrollManager = true;   // scroll handling
+//   Object.keys(window.DEBUG).forEach(k => window.DEBUG[k] = true);  // enable all
+window.DEBUG = {
+  scrollManager: false,
+  scrollToast: false,
+  sectionTransition: false,
+  exitAnimation: false,
+  entryAnimation: false,
+  stateManagement: false,
+  cleanup: false,
+  logoQueue: false,
+  glassContainer: false,
+  headerAnimation: false,
+  scrollButtons: false,
+  navigationSetup: false,
+  navigationDots: false,
+  navigation: false,
+  effects: false,
+  initialization: false,
+  main: false
+};
+
+/**
+ * Centralized logging function
+ * @param {string} category - Logging category from window.DEBUG
+ * @param {...any} args - Arguments to log
+ */
+window.log = function(category, ...args) {
+  if (window.DEBUG && window.DEBUG[category]) {
+    console.log(...args);
+  }
 };
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -100,46 +216,143 @@ window.sectionCount = 0;
 window.currentSection = 0;
 window.CONFIG = null;
 
-// ======= INITIALIZATION =======
+// ======= INITIALIZATION (single entry) =======
 document.addEventListener('DOMContentLoaded', () => {
-  // Initialize Splitting.js
-  if (typeof Splitting === 'function') Splitting();
-  
-  // Short delay to ensure everything is ready
+  // Preloader: hide immediately if already seen, otherwise animate out after delay
+  const preloader = document.getElementById('preloader');
+  if (preloader) {
+    const hasSeenPreloader = sessionStorage.getItem('hasSeenPreloader');
+    if (hasSeenPreloader) {
+      preloader.style.display = 'none';
+    } else {
+      preloader.style.display = 'flex';
+      preloader.style.opacity = '1';
+      setTimeout(() => {
+        gsap.to(preloader, {
+          opacity: 0,
+          duration: 3,
+          ease: "power2.out",
+          onComplete: () => {
+            preloader.style.display = 'none';
+          }
+        });
+        sessionStorage.setItem('hasSeenPreloader', 'true');
+      }, 300);
+    }
+  }
+
+  // Plan B (mobile only): pause video when tab hidden or banner off-screen
+  const bgVideo = document.getElementById('bg-video');
+  const banner = document.getElementById('banner');
+  if (bgVideo && banner) {
+    function isMobileView() {
+      return window.matchMedia && window.matchMedia('(max-width: 768px)').matches;
+    }
+    function onVisibilityChange() {
+      if (!isMobileView()) return;
+      if (document.hidden) {
+        bgVideo.pause();
+      } else {
+        const r = banner.getBoundingClientRect();
+        if (r.top < window.innerHeight && r.bottom > 0) {
+          bgVideo.play().catch(() => {});
+        }
+      }
+    }
+    document.addEventListener('visibilitychange', onVisibilityChange);
+    if (typeof IntersectionObserver !== 'undefined') {
+      const videoObserver = new IntersectionObserver(
+        (entries) => {
+          if (!isMobileView()) return;
+          const e = entries[0];
+          if (!e || e.target !== banner) return;
+          if (e.isIntersecting) {
+            if (!document.hidden) bgVideo.play().catch(() => {});
+          } else {
+            bgVideo.pause();
+          }
+        },
+        { threshold: 0.1, root: null }
+      );
+      videoObserver.observe(banner);
+    }
+  }
+
+  // Short delay then full site init
   setTimeout(initSite, 100);
 });
 
-// jQuery initialization for backward compatibility
-jQuery(document).ready($ => {
-  // Handle preloader if it exists
-  const preloader = $("#preloader");
-  if (!preloader.length) return;
-  
-  const hasSeenPreloader = sessionStorage.getItem('hasSeenPreloader');
-  
-  if (hasSeenPreloader) {
-    preloader.hide();
-  } else {
-    setTimeout(() => {
-      preloader.css({
-        'display': 'flex',
-        'opacity': '1'
-      });
-      
-      gsap.to(preloader[0], {
-        opacity: 0,
-        duration: 3,
-        ease: "power2.out",
-        onComplete: () => preloader.hide()
-      });
-      
-      sessionStorage.setItem('hasSeenPreloader', 'true');
-    }, 300);
+// ======= DESKTOP LAYOUT RESET =======
+/**
+ * Restore desktop layout when switching from mobile to desktop viewport.
+ * Call when resize detects transition from <=768px to >768px.
+ * - Removes header.mobile and menu.active (closes mobile menu, restores desktop nav)
+ * - Clears navigation dots offset
+ * - On Services section at desktop (900px+): resets services wrapper and expands all accordions
+ */
+function resetDesktopLayout() {
+  const header = document.getElementById('header');
+  const menu = document.querySelector('#header .menu-wrapper ul.menu');
+  if (header) header.classList.remove('mobile');
+  if (menu) menu.classList.remove('active');
+  document.documentElement.style.setProperty('--section-dots-y-offset', '0px');
+
+  const isDesktopServices = window.matchMedia && window.matchMedia('(min-width: 900px)').matches;
+  const servicesSection = document.getElementById('services');
+  const onServices = servicesSection && window.sections && typeof window.currentSection === 'number' &&
+    window.sections.indexOf(servicesSection) === window.currentSection;
+
+  if (isDesktopServices && onServices && window.Portfolio.serviceAccordions && window.Portfolio.serviceAccordions.length) {
+    const wrapper = window.Portfolio.serviceAccordions[0].element.closest('.services-wrapper');
+    if (wrapper) gsap.set(wrapper, { y: 0 });
+    window.Portfolio.serviceAccordions.forEach(accordion => {
+      gsap.killTweensOf(accordion.element);
+      gsap.killTweensOf(accordion.content);
+      if (!accordion.isExpanded) accordion.expand();
+    });
   }
-  
-  // Add mobile menu handlers
-  window.Portfolio.effects.setupMobileMenu();
-});
+
+  window.log('initialization', '[RESET] Desktop layout reset applied');
+}
+
+/**
+ * Collapse all service accordions when entering mobile/tablet viewport (e.g. from desktop).
+ * Call when resize detects transition from >=900px to <900px and user is on Services section.
+ */
+function collapseServicesForMobileView() {
+  const servicesSection = document.getElementById('services');
+  const onServices = servicesSection && window.sections && typeof window.currentSection === 'number' &&
+    window.sections.indexOf(servicesSection) === window.currentSection;
+  if (!onServices || !window.Portfolio.serviceAccordions || !window.Portfolio.serviceAccordions.length) return;
+
+  const wrapper = window.Portfolio.serviceAccordions[0].element.closest('.services-wrapper');
+  if (wrapper) gsap.set(wrapper, { y: 0 });
+  window.Portfolio.serviceAccordions.forEach(accordion => {
+    gsap.killTweensOf(accordion.element);
+    gsap.killTweensOf(accordion.content);
+    if (accordion.isExpanded) accordion.collapse();
+  });
+  window.log('initialization', '[RESET] Services collapsed for mobile view');
+}
+
+/** Tracks viewport crossing 900px for services layout (desktop = expanded, mobile = collapsed). */
+let lastViewportWasDesktopServices = true;
+
+function setupViewportServicesReset() {
+  const mq = window.matchMedia && window.matchMedia('(min-width: 900px)');
+  if (!mq) return;
+  lastViewportWasDesktopServices = mq.matches;
+  window.addEventListener('resize', () => {
+    const isDesktopServices = mq.matches;
+    if (lastViewportWasDesktopServices && !isDesktopServices) collapseServicesForMobileView();
+    lastViewportWasDesktopServices = isDesktopServices;
+  });
+}
+
+// Expose for navigation resize and any other callers
+window.Portfolio = window.Portfolio || {};
+window.Portfolio.resetDesktopLayout = resetDesktopLayout;
+window.Portfolio.collapseServicesForMobileView = collapseServicesForMobileView;
 
 // ======= CORE FUNCTIONS =======
 
@@ -155,11 +368,23 @@ function initSite() {
   window.sectionCount = sectionCount;
   window.currentSection = currentSection;
   window.CONFIG = CONFIG;
+
+  /** On viewport <= 599px returns height with 10px offset from bottom (80px top + 10px bottom = 90px). */
+  window.getGlassHeight = function() {
+    if (typeof window.matchMedia !== 'undefined' && window.matchMedia('(max-width: 599px)').matches)
+      return 'calc(100vh - 90px)';
+    return (window.CONFIG && window.CONFIG.glass && window.CONFIG.glass.height) ? window.CONFIG.glass.height : '650px';
+  };
+
+  // Initialize translations before navigation dots are built
+  if (window.Portfolio.i18n && window.Portfolio.i18n.init) {
+    window.Portfolio.i18n.init();
+  }
   
   // Initialize simple state management
   if (window.Portfolio.scroll && window.Portfolio.scroll.initializeSimpleState) {
     window.Portfolio.scroll.initializeSimpleState(currentSection);
-    console.log('[INIT] Simple state management initialized');
+    window.log('initialization', '[INIT] Simple state management initialized');
   }
   
   // 📌 ADDED: Hide all sections initially to prevent flash
@@ -171,12 +396,17 @@ function initSite() {
   });
   
   window.Portfolio.navigation.setupNavigation(sections, currentSection, window.Portfolio.scroll.goToSection, CONFIG);
+  if (window.matchMedia && window.matchMedia('(min-width: 769px)').matches && window.Portfolio.resetDesktopLayout) {
+    window.Portfolio.resetDesktopLayout();
+  }
   window.Portfolio.ui.setupGlassContainer();
+  window.Portfolio.ui.initializeScrollToast(); // 🆕 Initialize scroll toast notification
   window.Portfolio.effects.setupButtonEffects();
   window.Portfolio.scroll.setupScrollObserver(CONFIG);
   window.Portfolio.effects.setupScrollButtonHoverEffects();
   // Updated Services Layout – 2025 Version
   window.Portfolio.effects.setupServiceAccordion(); // Initialize new accordion-based service cards
+  setupViewportServicesReset(); // Collapse services when entering mobile view; desktop reset keeps them expanded
   // window.Portfolio.effects.setupFlipCardFormIntegration(); // Legacy - uncomment to restore flip cards
   
   // 🚨 CRITICAL: Set initial scroll button visibility IMMEDIATELY (elements are visible by default now)
@@ -189,7 +419,7 @@ function initSite() {
       opacity: 0,
       visibility: "hidden"
     });
-    console.log('[INIT] Initial scroll buttons hidden - will be managed by updateScrollButtons');
+    window.log('initialization', '[INIT] Initial scroll buttons hidden - will be managed by updateScrollButtons');
   }
 
   // Set initial state
@@ -248,25 +478,26 @@ window.animateSectionContent = function(section, isEntering) {
   const isBanner = section.id === 'banner';
   
   // 📌 DEBUG: Log which section and animation type
-  console.log(`[ANIMATION] animateSectionContent called for ${section.id}, isEntering: ${isEntering}`);
+  window.log('main', `[ANIMATION] animateSectionContent called for ${section.id}, isEntering: ${isEntering}`);
   
   // BANNER SECTIONS: Skip entirely - let animateBannerContent() handle it
   if (isBanner) {
     if (CONFIG.debug) {
-      console.log('[ANIMATE] Skipping animateSectionContent for banner - dedicated function handles it');
+      window.log('main', '[ANIMATE] Skipping animateSectionContent for banner - dedicated function handles it');
     }
     return;
   }
   
   // Select elements to animate for NON-BANNER sections only
-  const selectors = '.headline, .headline h1, .headline h2, .headline p, .headline .btn, .about-wrapper, .portfolio-wrapper, .form-wrapper, .services-wrapper, .flip-cards-container, .service-categories-grid';
+  // Note: .service-categories-grid removed - handled by auto-expand function
+  const selectors = '.headline, .headline h1, .headline h2, .headline p, .headline .btn, .about-wrapper, .portfolio-wrapper, .form-wrapper, .form-left, .form-right, .services-wrapper, .flip-cards-container';
   
   const elements = section.querySelectorAll(selectors);
   if (elements.length === 0) return;
   
   if (!isEntering) {
     // EXIT ANIMATION - Updated to fade-up
-    console.log(`[ANIMATION EXIT] Fading up ${section.id} with y: -10`);
+    window.log('main', `[ANIMATION EXIT] Fading up ${section.id} with y: -10`);
     gsap.to(elements, {
       opacity: 0,
       y: -10,  // 📌 FASTER: Reduced to -10 for snappy responsiveness
@@ -279,7 +510,7 @@ window.animateSectionContent = function(section, isEntering) {
     });
   } else {
     // Standard section entry animation (NON-BANNER only)
-    console.log(`[ANIMATION ENTRY] Fading in ${section.id} from y: 12`);
+    window.log('main', `[ANIMATION ENTRY] Fading in ${section.id} from y: 12`);
     gsap.set(elements, { 
       opacity: 0, 
       y: 12,      // 📌 FASTER: Reduced to 12 for snappy responsiveness
@@ -349,8 +580,8 @@ window.resetBannerContent = function(section) {
   document.body.classList.add('banner-active');
   
   if (CONFIG.debug) {
-    console.log('[BANNER RESET] Reset positioning without setting opacity - let animation handle it');
-    console.log('[BANNER RESET] Elements found:', elementsToReset.length);
+    window.log('main', '[BANNER RESET] Reset positioning without setting opacity - let animation handle it');
+    window.log('main', '[BANNER RESET] Elements found:', elementsToReset.length);
   }
 }
 
@@ -392,14 +623,19 @@ window.animateBannerContent = function(section, isInitialLoad = false) {
   if (elementsToAnimate.length === 0) return;
 
   // 📌 ABSOLUTELY ENSURE FADE FROM BELOW
-  console.log('[BANNER] FORCING FADE FROM BELOW ANIMATION');
+  window.log('main', '[BANNER] FORCING FADE FROM BELOW ANIMATION');
   
   // Set elements WAY below and invisible
   elementsToAnimate.forEach((el, index) => {
+    const isInteractiveButton = el === btn;
+    const initialScale = isInteractiveButton ? 1 : 0.97;
+    const initialY = 60;
+    const initialTransform = isInteractiveButton ? `translateY(${initialY}px)` : `translateY(${initialY}px) scale(0.9)`;
+
     gsap.set(el, {
       y: 15,              // 📌 FASTER: Reduced to 15 for snappy responsiveness
       opacity: 0,
-      scale: 0.97,
+      scale: initialScale,
       x: 0,               // 📌 FORCE x to 0 - no horizontal movement
       rotation: 0,
       force3D: true,
@@ -407,14 +643,14 @@ window.animateBannerContent = function(section, isInitialLoad = false) {
     });
     
     // 📌 FORCE STYLE to ensure no CSS interference
-    el.style.transform = `translateY(60px) scale(0.9)`;
+    el.style.transform = initialTransform;
     el.style.opacity = '0';
   });
 
   // Create timeline for precise control
   const tl = gsap.timeline({
-    onStart: () => console.log('[BANNER] Starting fade from below animation'),
-    onComplete: () => console.log('[BANNER] Fade from below complete')
+    onStart: () => window.log('main', '[BANNER] Starting fade from below animation'),
+    onComplete: () => window.log('main', '[BANNER] Fade from below complete')
   });
 
   // Animate each element with stagger
@@ -438,10 +674,10 @@ window.animateBannerContent = function(section, isInitialLoad = false) {
  * This creates a reversed version of the entry animation
  */
 window.animateBannerExit = function(section) {
-  console.log(`[BANNER EXIT] Function called for section: ${section ? section.id : 'null'}`);
+  window.log('main', `[BANNER EXIT] Function called for section: ${section ? section.id : 'null'}`);
   
   if (!section || section.id !== 'banner') {
-    console.log(`[BANNER EXIT] Invalid section - expected banner, got: ${section ? section.id : 'null'}`);
+    window.log('main', `[BANNER EXIT] Invalid section - expected banner, got: ${section ? section.id : 'null'}`);
     return;
   }
   
@@ -449,15 +685,15 @@ window.animateBannerExit = function(section) {
   const h2 = section.querySelector('h2');
   const btn = section.querySelector('.btn');
   
-  console.log(`[BANNER EXIT] Found elements - h1: ${!!h1}, h2: ${!!h2}, btn: ${!!btn}`);
+  window.log('main', `[BANNER EXIT] Found elements - h1: ${!!h1}, h2: ${!!h2}, btn: ${!!btn}`);
   
   const elementsToAnimate = [h1, h2, btn].filter(el => el);
   if (elementsToAnimate.length === 0) {
-    console.log(`[BANNER EXIT] No elements to animate found!`);
+    window.log('main', `[BANNER EXIT] No elements to animate found!`);
     return;
   }
   
-  console.log(`[BANNER EXIT] Starting fade-up exit animation for ${elementsToAnimate.length} elements`);
+  window.log('main', `[BANNER EXIT] Starting fade-up exit animation for ${elementsToAnimate.length} elements`);
   
   // Kill any existing animations
   gsap.killTweensOf(elementsToAnimate);
@@ -471,7 +707,7 @@ window.animateBannerExit = function(section) {
   gsap.to(elementsToAnimate, {
     y: 12,               // 📌 FASTER: Reduced to 12 for snappy responsiveness
     opacity: 0,
-    scale: 0.97,         // 📌 FASTER: Less dramatic scale change
+    scale: (_, el) => (el === btn ? 1 : 0.97), // Keep banner button at scale 1 to avoid snap artifacts
     duration: 0.4,       // 📌 FASTER: Reduced duration for responsiveness
     ease: "power2.in",
     stagger: {
@@ -480,15 +716,16 @@ window.animateBannerExit = function(section) {
     },
     force3D: true,
     overwrite: true,
-    onStart: () => console.log(`[BANNER EXIT] Animation started - moving DOWN`),
+    onStart: () => window.log('main', `[BANNER EXIT] Animation started - moving DOWN`),
     onComplete: () => {
       // 🚨 FIX: Restore CSS transitions after animation
       gsap.set(elementsToAnimate, { 
         transition: "" // Restore CSS transitions for other interactions
       });
-      console.log(`[BANNER EXIT] Animation completed`);
+      window.log('main', `[BANNER EXIT] Animation completed`);
     }
   });
+
 }
 
 // setupGlassContainer moved to ui.js module
@@ -515,7 +752,7 @@ window.animateBannerExit = function(section) {
  */
 window.logDebugInfo = function(message) {
   if (!CONFIG.debug) return;
-  console.log(`[DEBUG] ${message}`);
+  window.log('main', `[DEBUG] ${message}`);
 }
 
 // ======= PUBLIC API =======
@@ -529,4 +766,3 @@ window.toggleDebug = () => {
   return `Debug mode: ${CONFIG.debug ? 'on' : 'off'}`;
 };
 
-console.log("CHUCK TESTING 123");

@@ -9,7 +9,61 @@
 
   window.Portfolio = window.Portfolio || {}; // Module-level variables
 
-  var observer = null; // 🚀 ENHANCED: Advanced animation state management with transaction system
+  var observer = null;
+  var touchCleanup = null;
+  var SWIPE_THRESHOLD_PX = 50;
+  var MOBILE_BREAKPOINT_PX = 768;
+
+  function isMobileView() {
+    return window.matchMedia && window.matchMedia('(max-width: ' + MOBILE_BREAKPOINT_PX + 'px)').matches;
+  }
+  /**
+   * Setup touch swipe: swipe down = next section, swipe up = previous section.
+   * Prevents default touch so native scroll doesn't conflict. One section per swipe.
+   */
+
+
+  function setupTouchSwipe(CONFIG) {
+    var startY = 0;
+
+    function onTouchStart(e) {
+      if (e.touches.length !== 1) return;
+      startY = e.touches[0].clientY;
+    }
+
+    function onTouchMove(e) {
+      if (e.touches.length !== 1) return;
+      e.preventDefault();
+    }
+
+    function onTouchEnd(e) {
+      if (e.changedTouches.length !== 1) return;
+      var endY = e.changedTouches[0].clientY;
+      var deltaY = endY - startY;
+      if (Math.abs(deltaY) < SWIPE_THRESHOLD_PX) return;
+      e.preventDefault(); // Swipe up (finger moves up) = next section; swipe down = previous section
+
+      var direction = deltaY < 0 ? 1 : -1;
+      handleScrollEvent(direction, CONFIG);
+    }
+
+    var target = document.body;
+    target.addEventListener('touchstart', onTouchStart, {
+      passive: true
+    });
+    target.addEventListener('touchmove', onTouchMove, {
+      passive: false
+    });
+    target.addEventListener('touchend', onTouchEnd, {
+      passive: false
+    });
+    return function cleanup() {
+      target.removeEventListener('touchstart', onTouchStart);
+      target.removeEventListener('touchmove', onTouchMove);
+      target.removeEventListener('touchend', onTouchEnd);
+    };
+  } // 🚀 ENHANCED: Advanced animation state management with transaction system
+
 
   var animationState = {
     transactionId: 0,
@@ -66,116 +120,143 @@
         this.progressTween = null;
       }
     }
-  }; // 🚀 ENHANCED: Smart scroll manager with strict section skip detection
+  }; // 🚀 SIMPLIFIED: Smart scroll manager with event deduplication
 
   var scrollManager = {
     lastScrollTime: 0,
-    debounceWindow: 100,
-    // Will be set from CONFIG
+    lastCountedScrollTime: 0,
+    // Track when we last counted a scroll
+    debounceWindow: 150,
     pendingDirection: null,
     debounceTimeout: null,
-    // Scroll burst tracking for aggressive skip detection
-    burstScrolls: [],
-    // Array of {time, direction}
-    burstWindow: 200,
-    // Will be set from CONFIG
-    rapidThreshold: 70,
-    // Will be set from CONFIG
-    minRapidCount: 2,
-    // Will be set from CONFIG
-    skipEnabled: true,
-    // Will be set from CONFIG
+    // Track scroll bursts - how many DISTINCT user scrolls in same direction
+    scrollBurstCount: 0,
+    lastBurstDirection: null,
+    hasTriggeredToast: false,
+    // 🔧 FIX: Track if toast has been triggered in current burst
     handleScroll: function handleScroll(direction, CONFIG) {
       var _this2 = this;
 
-      var now = Date.now(); // Track this scroll in burst array
+      var now = Date.now(); // 🔧 FIX: Remove optional chaining for Babel compatibility
 
-      this.burstScrolls.push({
-        time: now,
-        direction: direction
-      }); // Clean up old scrolls outside burst window
+      var debounceWindow = CONFIG.interruption && CONFIG.interruption.debounceWindow || 150;
+      var minScrollInterval = 60; // 🔧 ADJUSTED: 30ms → 60ms for less sensitive toast triggering
+      // 🔧 DEBUG: Log current state
 
-      this.burstScrolls = this.burstScrolls.filter(function (scroll) {
-        return now - scroll.time < _this2.burstWindow;
-      }); // Count rapid scrolls in SAME direction
+      window.log('scrollManager', "[SCROLL DEBUG] handleScroll called - direction: ".concat(direction, ", current count: ").concat(this.scrollBurstCount, ", hasTimeout: ").concat(!!this.debounceTimeout, ", lastDir: ").concat(this.lastBurstDirection, ", hasTriggered: ").concat(this.hasTriggeredToast)); // Check if this is a distinct scroll action (not just Observer firing multiple times)
 
-      var rapidCount = 0;
+      var timeSinceLastCount = now - this.lastCountedScrollTime;
+      var isDistinctScroll = timeSinceLastCount >= minScrollInterval; // Only count distinct scrolls in same direction while debouncing
 
-      for (var i = 1; i < this.burstScrolls.length; i++) {
-        var current = this.burstScrolls[i];
-        var previous = this.burstScrolls[i - 1]; // Check if same direction AND rapid timing
-
-        if (current.direction === previous.direction && current.time - previous.time < this.rapidThreshold) {
-          rapidCount++;
-        }
+      if (this.debounceTimeout && direction === this.lastBurstDirection && isDistinctScroll) {
+        this.scrollBurstCount++;
+        this.lastCountedScrollTime = now;
+        window.log('scrollManager', "[SCROLL MANAGER] \u2705 Continuing burst - count: ".concat(this.scrollBurstCount, ", direction: ").concat(direction));
+      } else if (!this.debounceTimeout || direction !== this.lastBurstDirection) {
+        // 🔧 FIX: Start count at 1 instead of 0 (this IS the first scroll in burst)
+        window.log('scrollManager', "[SCROLL MANAGER] \uD83C\uDD95 NEW burst starting - direction: ".concat(direction, ", resetting count from ").concat(this.scrollBurstCount, " to 1"));
+        this.scrollBurstCount = 1;
+        this.lastBurstDirection = direction;
+        this.lastCountedScrollTime = now;
+        this.hasTriggeredToast = false; // 🔧 CRITICAL: Reset trigger flag on new burst
+      } else {
+        window.log('scrollManager', "[SCROLL MANAGER] \u23ED\uFE0F Observer event ignored - too soon (".concat(timeSinceLastCount, "ms < ").concat(minScrollInterval, "ms)"));
       }
 
       this.lastScrollTime = now;
-      this.pendingDirection = direction; // Debouncing - wait for scroll to settle
+      this.pendingDirection = direction; // Debouncing - reset timer on each scroll event
 
       clearTimeout(this.debounceTimeout);
       this.debounceTimeout = setTimeout(function () {
-        _this2.executeScroll(direction, rapidCount, CONFIG);
-      }, this.debounceWindow);
+        _this2.executeScroll(direction, _this2.scrollBurstCount, CONFIG); // 🔧 CRITICAL: Reset ALL state after execution
+
+
+        _this2.scrollBurstCount = 0;
+        _this2.lastBurstDirection = null;
+        _this2.hasTriggeredToast = false;
+        _this2.debounceTimeout = null; // 🔧 CRITICAL FIX: Clear timeout reference!
+
+        if (CONFIG.debug) {
+          window.log('scrollManager', '[SCROLL MANAGER] Burst complete - all state reset');
+        }
+      }, debounceWindow);
 
       if (CONFIG.debug) {
-        console.log("[SCROLL MANAGER] Scroll queued - direction: ".concat(direction, ", rapidCount: ").concat(rapidCount, ", burst: ").concat(this.burstScrolls.length));
+        window.log('scrollManager', "[SCROLL MANAGER] Timer reset - burstCount: ".concat(this.scrollBurstCount, ", will execute in ").concat(debounceWindow, "ms"));
       }
     },
-    executeScroll: function executeScroll(direction, rapidCount, CONFIG) {
-      var _this3 = this;
+    executeScroll: function executeScroll(direction, burstCount, CONFIG) {
+      window.log('scrollManager', "[SCROLL DEBUG] executeScroll - burstCount: ".concat(burstCount, ", hasTriggered: ").concat(this.hasTriggeredToast)); // 🆕 SCROLL TOAST MESSAGE - Check AFTER burst completes
+      // Trigger if burst count is AT OR ABOVE threshold (5+ rapid scrolls)
+
+      var scrollMsgConfig = CONFIG.scrollMessage;
+      var shouldTrigger = scrollMsgConfig && scrollMsgConfig.enabled && burstCount >= scrollMsgConfig.minScrollsToTrigger && !this.hasTriggeredToast;
+      window.log('scrollToast', "[SCROLL TOAST DEBUG] Threshold: ".concat(scrollMsgConfig.minScrollsToTrigger, ", BurstCount: ").concat(burstCount, ", HasTriggered: ").concat(this.hasTriggeredToast, ", ShouldTrigger: ").concat(shouldTrigger));
+
+      if (shouldTrigger) {
+        if (window.Portfolio.ui && window.Portfolio.ui.showScrollToast) {
+          window.log('scrollToast', "[SCROLL TOAST] \uD83D\uDD14 TRIGGERING MESSAGE - burst count ".concat(burstCount, " reached threshold ").concat(scrollMsgConfig.minScrollsToTrigger));
+          window.Portfolio.ui.showScrollToast();
+          this.hasTriggeredToast = true;
+        }
+      } else {
+        window.log('scrollToast', "[SCROLL TOAST] \u274C NOT triggering - count: ".concat(burstCount, ", threshold: ").concat(scrollMsgConfig.minScrollsToTrigger, ", already triggered: ").concat(this.hasTriggeredToast));
+      } // Apply CONFIG settings (scrollBurst.enabled is false in CONFIG → always adjacent section)
+
+
+      var burstConfig = CONFIG.interruption && CONFIG.interruption.scrollBurst || {};
+      var skipEnabled = burstConfig.enabled !== false;
+      var minBurstForSkip = burstConfig.minBurstCount || 2; // How many bursts needed to skip
 
       if (CONFIG.debug) {
-        console.log("[SCROLL MANAGER] Executing scroll - direction: ".concat(direction, ", rapidCount: ").concat(rapidCount));
+        window.log('scrollManager', "[SCROLL MANAGER] Executing scroll - direction: ".concat(direction, ", burstCount: ").concat(burstCount, ", skipEnabled: ").concat(skipEnabled));
       } // Check if we can interrupt current animation
 
 
       if (animationState.isTransitioning && !animationState.canInterrupt()) {
         if (CONFIG.debug) {
-          console.log("[SCROLL MANAGER] Animation locked (".concat(Math.round(animationState.animationProgress * 100), "% complete) - scroll queued"));
-        } // Re-queue this scroll to try again after lock period
+          window.log('scrollManager', "[SCROLL MANAGER] Animation locked (".concat(Math.round(animationState.animationProgress * 100), "% complete) - scroll ignored"));
+        }
 
-
-        this.debounceTimeout = setTimeout(function () {
-          _this3.executeScroll(direction, rapidCount, CONFIG);
-        }, 50);
-        return;
-      } // Determine target based on rapid scroll count
+        return; // Just ignore the scroll if locked
+      } // Determine target based on burst count
 
 
       var targetSection;
 
-      if (rapidCount >= 2) {
-        // Aggressive scrolling detected - skip sections
-        // rapidCount 2 = skip 1 section (go to +2)
-        // rapidCount 3 = skip 2 sections (go to +3), etc.
-        var skipAmount = rapidCount + 1;
-        targetSection = window.currentSection + direction * skipAmount; // Clamp to valid section bounds
+      if (skipEnabled && burstCount >= minBurstForSkip) {
+        // Burst scrolling detected - skip sections
+        // burstCount 2 = skip 1 section (go to +2)
+        // burstCount 3 = skip 2 sections (go to +3), etc.
+        var skipAmount = Math.min(burstCount, 2); // Cap at skipping 2 sections max
+
+        targetSection = window.currentSection + direction * (skipAmount + 1); // Clamp to valid section bounds
 
         targetSection = Math.max(0, Math.min(targetSection, window.sectionCount - 1));
 
         if (CONFIG.debug) {
-          console.log("[SCROLL MANAGER] \uD83D\uDE80 Section skip detected! ".concat(window.currentSection, " \u2192 ").concat(targetSection, " (skip: ").concat(skipAmount, ")"));
+          window.log('scrollManager', "[SCROLL MANAGER] \uD83D\uDE80 Burst skip! ".concat(window.currentSection, " \u2192 ").concat(targetSection, " (burstCount: ").concat(burstCount, ", skip: ").concat(skipAmount, ")"));
         }
       } else {
         // Normal scroll - adjacent section only
         targetSection = window.currentSection + direction;
+
+        if (CONFIG.debug) {
+          window.log('scrollManager', "[SCROLL MANAGER] Normal scroll - adjacent only (burstCount: ".concat(burstCount, " < min: ").concat(minBurstForSkip, ")"));
+        }
       } // Validate target section bounds
 
 
       if (targetSection < 0 || targetSection >= window.sectionCount) {
         if (CONFIG.debug) {
-          console.log("[SCROLL MANAGER] Target section ".concat(targetSection, " out of bounds - ignoring"));
+          window.log('scrollManager', "[SCROLL MANAGER] Target section ".concat(targetSection, " out of bounds - ignoring"));
         }
 
         return;
-      } // Reset burst after execution
-
-
-      this.burstScrolls = [];
+      }
 
       if (CONFIG.debug) {
-        console.log("[SCROLL MANAGER] Navigation: ".concat(window.currentSection, " \u2192 ").concat(targetSection));
+        window.log('scrollManager', "[SCROLL MANAGER] \u2705 Navigation: ".concat(window.currentSection, " \u2192 ").concat(targetSection));
       } // Execute transition
 
 
@@ -185,7 +266,10 @@
       clearTimeout(this.debounceTimeout);
       this.debounceTimeout = null;
       this.pendingDirection = null;
-      this.burstScrolls = [];
+      this.scrollBurstCount = 0;
+      this.lastBurstDirection = null;
+      this.lastCountedScrollTime = 0;
+      this.hasTriggeredToast = false; // Reset toast trigger flag
     }
   }; // 🚀 ENHANCED: Logo rotation queue system (Priority 4 - lowest)
 
@@ -193,7 +277,7 @@
     targetRotation: 0,
     rotationTimeout: null,
     queueRotation: function queueRotation(rotation) {
-      var _this4 = this;
+      var _this3 = this;
 
       var immediate = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : false;
       this.targetRotation = rotation;
@@ -206,7 +290,7 @@
 
       clearTimeout(this.rotationTimeout);
       this.rotationTimeout = setTimeout(function () {
-        _this4.executeRotation();
+        _this3.executeRotation();
       }, 100);
     },
     executeRotation: function executeRotation() {
@@ -219,7 +303,7 @@
         overwrite: true // Always overwrite previous rotation
 
       });
-      console.log("[LOGO QUEUE] Rotating to ".concat(this.targetRotation, "\xB0"));
+      window.log('logoQueue', "[LOGO QUEUE] Rotating to ".concat(this.targetRotation, "\xB0"));
     }
   }; // Simple state management for atomic operations
 
@@ -233,33 +317,44 @@
       window.currentSection = validSection; // Update body class atomically 
 
       document.body.classList.toggle('banner-active', validSection === 0);
-      console.log("[STATE] Simple atomic update to section ".concat(validSection));
+      window.log('stateManagement', "[STATE] Simple atomic update to section ".concat(validSection));
       return validSection;
     }
   };
   /**
-   * Setup GSAP scroll observer with direction-aware interruption
+   * Setup GSAP scroll observer with direction-aware interruption.
+   * On mobile (viewport <= 768px): Observer uses wheel only; touch is handled by setupTouchSwipe
+   * so that swipe down = next section, swipe up = previous section, without blocking touch.
    */
 
   function setupScrollObserver(CONFIG) {
-    // Kill existing observer if it exists
+    if (touchCleanup) {
+      touchCleanup();
+      touchCleanup = null;
+    }
+
     if (observer) observer.kill();
+    var isMobile = isMobileView();
+    var observerType = isMobile ? 'wheel' : 'wheel,touch,pointer';
     observer = Observer.create({
       target: window,
-      type: "wheel,touch,pointer",
+      type: observerType,
       wheelSpeed: CONFIG.navigation.wheelSpeed,
       preventDefault: true,
       dragMinimum: 250,
       tolerance: 10,
-      // Small tolerance to prevent over-sensitivity
       lockAxis: true,
       onUp: function onUp() {
-        handleScrollEvent(-1, CONFIG); // Up direction
+        handleScrollEvent(-1, CONFIG);
       },
       onDown: function onDown() {
-        handleScrollEvent(1, CONFIG); // Down direction
+        handleScrollEvent(1, CONFIG);
       }
     });
+
+    if (isMobile) {
+      touchCleanup = setupTouchSwipe(CONFIG);
+    }
   }
   /**
    * 🚀 ENHANCED: Handle scroll events with smart debouncing and direction detection
@@ -268,7 +363,7 @@
 
   function handleScrollEvent(direction, CONFIG) {
     if (CONFIG.debug) {
-      console.log("[SCROLL] Direction: ".concat(direction, ", IsAnimating: ").concat(window.isAnimating, ", Progress: ").concat(Math.round(animationState.animationProgress * 100), "%, CurrentSection: ").concat(window.currentSection));
+      window.log('scrollManager', "[SCROLL] Direction: ".concat(direction, ", IsAnimating: ").concat(window.isAnimating, ", Progress: ").concat(Math.round(animationState.animationProgress * 100), "%, CurrentSection: ").concat(window.currentSection));
     } // Use smart scroll manager for all scroll handling
 
 
@@ -282,42 +377,51 @@
 
   function killAllPendingAnimations() {
     var priority = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : 'all';
-    console.log("[CLEANUP] Killing all pending animations (priority: ".concat(priority, ")")); // Invalidate current transaction to prevent delayed callbacks from executing
+    window.log('cleanup', "[CLEANUP] Killing all pending animations (priority: ".concat(priority, ")")); // Invalidate current transaction to prevent delayed callbacks from executing
 
     animationState.invalidateTransaction(); // Reset scroll manager state
 
     scrollManager.reset(); // Clear logo rotation queue
 
     clearTimeout(logoRotationQueue.rotationTimeout);
-    logoRotationQueue.rotationTimeout = null; // Priority 1: Content animations - fast-forward to completion instead of killing
+    logoRotationQueue.rotationTimeout = null; // Priority 1: Content animations - smart cleanup to prevent flicker
 
     if (priority === 'all' || priority === 'content') {
-      var contentSelectors = '.headline, .headline h1, .headline h2, .headline p, .headline .btn, .about-wrapper, .portfolio-wrapper, .form-wrapper, .services-wrapper, .flip-cards-container';
-      var contentElements = document.querySelectorAll(contentSelectors); // Fast-forward exit animations to completion (progress: 1) instead of killing abruptly
-      // This prevents visual "dip" during rapid scrolling
+      var contentSelectors = '.headline, .headline h1, .headline h2, .headline p, .headline .btn, .about-wrapper, .portfolio-wrapper, .form-wrapper, .form-left, .form-right, .services-wrapper, .flip-cards-container';
+      var contentElements = document.querySelectorAll(contentSelectors); // Smart cleanup: only fast-forward if animation is nearly complete (>80%)
+      // Otherwise just kill cleanly to prevent jitter
 
       gsap.getTweensOf(contentElements).forEach(function (tween) {
         if (tween.isActive()) {
-          tween.progress(1); // Complete the animation instantly
+          var progress = tween.progress();
+
+          if (progress > 0.8) {
+            tween.progress(1); // Nearly done - complete it
+          } // Otherwise let it be killed cleanly
+
         }
       });
       gsap.killTweensOf(contentElements);
-      console.log("[CLEANUP] Completed ".concat(contentElements.length, " content element animations"));
-    } // Priority 2: Glass container - fast-forward to completion
+      window.log('cleanup', "[CLEANUP] Cleaned ".concat(contentElements.length, " content element animations"));
+    } // Priority 2: Glass container - smart cleanup
 
 
     if (priority === 'all' || priority === 'glass') {
       var glassContainer = document.querySelector('.section-glass-container');
 
       if (glassContainer) {
-        // Fast-forward to completion to prevent visual dip
+        // Smart cleanup: only fast-forward if nearly complete
         gsap.getTweensOf(glassContainer).forEach(function (tween) {
           if (tween.isActive()) {
-            tween.progress(1); // Complete the animation instantly
+            var progress = tween.progress();
+
+            if (progress > 0.8) {
+              tween.progress(1); // Nearly done - complete it
+            }
           }
         });
         gsap.killTweensOf(glassContainer);
-        console.log("[CLEANUP] Completed glass container animations");
+        window.log('cleanup', "[CLEANUP] Cleaned glass container animations");
       }
     } // Priority 3: Navigation dots (always clean)
 
@@ -325,7 +429,7 @@
     if (priority === 'all' || priority === 'nav') {
       var navDots = document.querySelectorAll('.section-dot');
       gsap.killTweensOf(navDots);
-      console.log("[CLEANUP] Killed ".concat(navDots.length, " navigation dot animations"));
+      window.log('cleanup', "[CLEANUP] Killed ".concat(navDots.length, " navigation dot animations"));
     } // Priority 4: Logo rotation (always clean)
 
 
@@ -339,7 +443,7 @@
         gsap.killTweensOf(titles);
       }
 
-      console.log("[CLEANUP] Killed logo/header animations");
+      window.log('cleanup', "[CLEANUP] Killed logo/header animations");
     } // Kill scroll tweens
 
 
@@ -360,7 +464,7 @@
         child.kill();
       }
     });
-    console.log("[CLEANUP] All pending animations cleared");
+    window.log('cleanup', "[CLEANUP] All pending animations cleared");
   }
   /**
    * 🚀 ENHANCED: Calculate contextual easing based on section distance
@@ -403,27 +507,28 @@
     var validatedIndex = simpleState.validateSection(index);
 
     if (validatedIndex === window.currentSection && !isInterrupting) {
-      console.log("[GOTO] No transition needed - already at section ".concat(validatedIndex));
+      window.log('sectionTransition', "[GOTO] No transition needed - already at section ".concat(validatedIndex));
       return;
     }
 
-    console.log("[GOTO] Starting transition: ".concat(window.currentSection, " \u2192 ").concat(validatedIndex)); // 🚀 Calculate contextual timing for section skipping
+    window.log('sectionTransition', "[GOTO] Starting transition: ".concat(window.currentSection, " \u2192 ").concat(validatedIndex)); // 🚀 Calculate contextual timing for section skipping
 
     var transitionConfig = calculateSkipTransition(window.currentSection, validatedIndex);
     var totalDuration = transitionConfig.duration;
-    console.log("[GOTO] Section distance: ".concat(Math.abs(validatedIndex - window.currentSection), ", duration: ").concat(totalDuration, "s, easing: ").concat(transitionConfig.ease)); // 🚀 Clean up all pending animations before starting new transition
+    window.log('sectionTransition', "[GOTO] Section distance: ".concat(Math.abs(validatedIndex - window.currentSection), ", duration: ").concat(totalDuration, "s, easing: ").concat(transitionConfig.ease)); // 🚀 Clean up all pending animations before starting new transition
 
     killAllPendingAnimations('all'); // 🚀 Start new transaction and get unique ID
 
     var transactionId = animationState.startTransition(totalDuration);
-    console.log("[GOTO] Transaction #".concat(transactionId, " started")); // Hide scroll buttons immediately
+    window.log('sectionTransition', "[GOTO] Transaction #".concat(transactionId, " started")); // Hide scroll buttons immediately
 
     if (window.Portfolio.ui && window.Portfolio.ui.hideScrollButtons) {
       window.Portfolio.ui.hideScrollButtons();
-    } // Set animation lock
+    } // Set animation lock and body class for will-change scoping (Plan B performance)
 
 
-    window.isAnimating = true; // Track animation direction
+    window.isAnimating = true;
+    document.body.classList.add('section-transitioning'); // Track animation direction
 
     var direction = validatedIndex > window.currentSection ? 1 : -1;
     animationState.currentDirection = direction; // Simple section references
@@ -436,6 +541,19 @@
     if (!targetSection) {
       console.error("[GOTO] ERROR: Target section ".concat(validatedIndex, " element not found!"));
       return;
+    } // When entering services: hide scroll UI instantly so no flash during entry
+
+
+    if (targetSection.id === 'services') {
+      var scrollDownEl = document.querySelector('.scroll-down');
+      var scrollUpEl = document.querySelector('.scroll-up');
+
+      if (scrollDownEl && scrollUpEl) {
+        gsap.set([scrollDownEl, scrollUpEl], {
+          opacity: 0,
+          visibility: 'hidden'
+        });
+      }
     } // 🚀 ENHANCED: Transaction-validated promise chain
     // Step 1: Run EXIT animation FIRST while section is still visible
 
@@ -447,15 +565,16 @@
       } // Step 2: Prepare target section AFTER exit animation
 
 
-      console.log("[GOTO #".concat(transactionId, "] Preparing target section ").concat(targetSection.id)); // Show target section but ensure content starts hidden to prevent flash
+      window.log("[GOTO #".concat(transactionId, "] Preparing target section ").concat(targetSection.id)); // Show target section but ensure content starts hidden to prevent flash
 
       gsap.set(targetSection, {
         visibility: 'visible',
         display: 'flex'
       }); // Hide content elements in target section to prevent flash
+      // Note: .service-categories-grid removed - handled by auto-expand function
 
       if (!isBanner) {
-        var contentSelectors = '.headline, .headline h1, .headline h2, .headline p, .headline .btn, .about-wrapper, .portfolio-wrapper, .form-wrapper, .services-wrapper, .flip-cards-container';
+        var contentSelectors = '.headline, .headline h1, .headline h2, .headline p, .headline .btn, .about-wrapper, .portfolio-wrapper, .form-wrapper, .form-left, .form-right, .services-wrapper, .flip-cards-container';
         var contentElements = targetSection.querySelectorAll(contentSelectors);
 
         if (contentElements.length > 0) {
@@ -465,7 +584,7 @@
             // 📌 FASTER: Reduced to 12 for snappy responsiveness
             scale: 0.97
           });
-          console.log("[GOTO #".concat(transactionId, "] Content hidden for ").concat(targetSection.id, " to prevent flash"));
+          window.log("[GOTO #".concat(transactionId, "] Content hidden for ").concat(targetSection.id, " to prevent flash"));
         }
       } // Glass container management
 
@@ -483,13 +602,13 @@
             clearProps: "y" // Clear any Y transforms that break centering
 
           });
-          console.log("[GOTO #".concat(transactionId, "] Glass container forced hidden for banner"));
+          window.log("[GOTO #".concat(transactionId, "] Glass container forced hidden for banner"));
         } else {
           // Ensure glass container is in correct base state for all non-banner sections
           gsap.set(glassContainer, {
             visibility: "visible",
             display: "block",
-            height: window.CONFIG.glass.height,
+            height: window.getGlassHeight ? window.getGlassHeight() : window.CONFIG.glass.height,
             clearProps: "y",
             // Clear any Y transforms that break centering
             position: "fixed",
@@ -501,7 +620,7 @@
             transform: "translate(-50%, -50%)" // Center alignment
 
           });
-          console.log("[GOTO #".concat(transactionId, "] Glass container prepared for section ").concat(validatedIndex));
+          window.log("[GOTO #".concat(transactionId, "] Glass container prepared for section ").concat(validatedIndex));
         }
       } // Step 3: Scroll to target position
 
@@ -524,7 +643,7 @@
           ease: 'none',
           onComplete: function onComplete() {
             animationState.scrollTween = null;
-            console.log("[GOTO #".concat(transactionId, "] Scroll complete to section ").concat(validatedIndex));
+            window.log("[GOTO #".concat(transactionId, "] Scroll complete to section ").concat(validatedIndex));
             resolve();
           }
         });
@@ -553,17 +672,18 @@
       } // Step 6: Complete transition
 
 
-      console.log("[GOTO #".concat(transactionId, "] Transition completed successfully"));
+      window.log("[GOTO #".concat(transactionId, "] Transition completed successfully"));
       completeSectionTransition(validatedIndex, CONFIG, transactionId);
     })["catch"](function (error) {
       if (error.message.includes('cancelled')) {
-        console.log("[GOTO #".concat(transactionId, "] ").concat(error.message, " - graceful exit"));
+        window.log("[GOTO #".concat(transactionId, "] ").concat(error.message, " - graceful exit"));
       } else {
         console.error("[GOTO #".concat(transactionId, "] Transition failed:"), error);
       } // Only reset animation state if this is still the current transaction
 
 
       if (transactionId === animationState.transactionId) {
+        document.body.classList.remove('section-transitioning');
         animationState.currentDirection = 0;
         window.isAnimating = false;
       }
@@ -582,11 +702,11 @@
         return;
       }
 
-      console.log("[NAV UPDATE #".concat(transactionId, "] Updating navigation state to section ").concat(index)); // Clear header titles AFTER exit animation has completed
+      window.log('sectionTransition', "[NAV UPDATE #".concat(transactionId, "] Updating navigation state to section ").concat(index)); // Clear header titles AFTER exit animation has completed
 
       if (window.Portfolio.ui && window.Portfolio.ui.updateHeaderTitle) {
         window.Portfolio.ui.updateHeaderTitle(prevIndex, index);
-        console.log("[NAV UPDATE #".concat(transactionId, "] Header cleared after exit animation completed"));
+        window.log('sectionTransition', "[NAV UPDATE #".concat(transactionId, "] Header cleared after exit animation completed"));
       } // 🚀 Queue logo rotation using Priority 4 system (queued, skips intermediates)
       // 🔧 FIX: Also check if target is form section (last section) - should stay at 0°
 
@@ -596,7 +716,7 @@
 
       if (isBanner || isFormSection) {
         logoRotationQueue.queueRotation(0);
-        console.log("[NAV UPDATE #".concat(transactionId, "] ").concat(isBanner ? 'Banner' : 'Form', " section - arrow rotation queued to 0\xB0"));
+        window.log('sectionTransition', "[NAV UPDATE #".concat(transactionId, "] ").concat(isBanner ? 'Banner' : 'Form', " section - arrow rotation queued to 0\xB0"));
       } // IMMEDIATE banner reset if targeting banner
 
 
@@ -605,7 +725,7 @@
 
         if (bannerSection && window.resetBannerContent) {
           window.resetBannerContent(bannerSection);
-          console.log("[NAV UPDATE #".concat(transactionId, "] Banner reset applied"));
+          window.log('sectionTransition', "[NAV UPDATE #".concat(transactionId, "] Banner reset applied"));
         }
       } // 🚀 Priority 3: Update navigation dots with immediate state, async visual
 
@@ -618,7 +738,7 @@
         gsap.delayedCall(0.2, function () {
           // 🚀 Validate transaction before executing delayed callback
           if (transactionId !== animationState.transactionId) {
-            console.log("[NAV UPDATE #".concat(transactionId, "] Delayed nav dot update cancelled"));
+            window.log('sectionTransition', "[NAV UPDATE #".concat(transactionId, "] Delayed nav dot update cancelled"));
             return;
           }
 
@@ -626,7 +746,7 @@
             window.Portfolio.navigation.updateNavigation(index, false, CONFIG);
           }
 
-          console.log("[NAV UPDATE #".concat(transactionId, "] Navigation dots updated to section ").concat(index));
+          window.log('sectionTransition', "[NAV UPDATE #".concat(transactionId, "] Navigation dots updated to section ").concat(index));
         });
       }
 
@@ -647,7 +767,7 @@
       }
 
       if (!prevSection || prevSection === targetSection) {
-        console.log("[EXIT #".concat(transactionId, "] No exit animation needed - same section or no previous section"));
+        window.log('exitAnimation', "[EXIT #".concat(transactionId, "] No exit animation needed - same section or no previous section"));
         resolve(); // No exit animation needed
 
         return;
@@ -657,18 +777,17 @@
       var currentIndex = window.sections.indexOf(prevSection);
       var targetIndex = window.sections.indexOf(targetSection);
       var direction = targetIndex > currentIndex ? 'DOWN' : 'UP';
-      console.log("[EXIT DEBUG] Direction: ".concat(direction, ", Prev: ").concat(prevSection.id, " (").concat(currentIndex, "), Target: ").concat(targetSection.id, " (").concat(targetIndex, ")"));
-      var prevHasGlass = prevSection.id !== 'banner';
-      var targetHasGlass = targetSection.id !== 'banner';
+      window.log('exitAnimation', "[EXIT DEBUG] Direction: ".concat(direction, ", Prev: ").concat(prevSection.id, " (").concat(currentIndex, "), Target: ").concat(targetSection.id, " (").concat(targetIndex, ")")); // 🆕 Services section doesn't use glass container
+
+      var prevHasGlass = prevSection.id !== 'banner' && prevSection.id !== 'services';
+      var targetHasGlass = targetSection.id !== 'banner' && targetSection.id !== 'services';
       var bothHaveGlass = prevHasGlass && targetHasGlass;
       var exitDuration = CONFIG.animation.fadeSpeed * 0.5;
-      console.log("[EXIT START #".concat(transactionId, "] ").concat(prevSection.id, " exit animation beginning (").concat(direction, ")"));
-      console.log("[EXIT DEBUG #".concat(transactionId, "] prevHasGlass: ").concat(prevHasGlass, ", targetHasGlass: ").concat(targetHasGlass, ", bothHaveGlass: ").concat(bothHaveGlass)); // 🚀 Priority 4: Queue arrow/header exit animation (non-blocking, queued)
+      window.log('exitAnimation', "[EXIT START #".concat(transactionId, "] ").concat(prevSection.id, " exit animation beginning (").concat(direction, ")"));
+      window.log('exitAnimation', "[EXIT DEBUG #".concat(transactionId, "] prevHasGlass: ").concat(prevHasGlass, ", targetHasGlass: ").concat(targetHasGlass, ", bothHaveGlass: ").concat(bothHaveGlass)); // 🆕 HANDLE SERVICES EXIT ANIMATION (non-glass section but needs header fadeout)
 
-      if (prevHasGlass) {
-        console.log("[EXIT #".concat(transactionId, "] Queueing arrow/header exit for glass section ").concat(prevSection.id)); // Queue logo rotation to 0 (will be executed after debounce)
-
-        logoRotationQueue.queueRotation(0); // Immediately fade out header titles (Priority 4 but visible element)
+      if (prevSection.id === 'services') {
+        window.log('exitAnimation', "[EXIT #".concat(transactionId, "] Services section exit - fading out header")); // Fade out header title only (logo rotation handled in entry animation)
 
         var titleContainer = document.getElementById('dynamic-header-title-container');
 
@@ -676,8 +795,29 @@
           var existingTitles = titleContainer.querySelectorAll('.header-dynamic-title');
 
           if (existingTitles.length > 0) {
-            console.log("[EXIT #".concat(transactionId, "] Fading ").concat(existingTitles.length, " header titles"));
+            window.log('exitAnimation', "[EXIT #".concat(transactionId, "] Fading out Services header title"));
             gsap.to(existingTitles, {
+              autoAlpha: 0,
+              xPercent: -100,
+              duration: 0.3,
+              ease: 'power2.in'
+            });
+          }
+        }
+      } // 🚀 Priority 4: Queue arrow/header exit animation (non-blocking, queued)
+
+
+      if (prevHasGlass) {
+        window.log('exitAnimation', "[EXIT #".concat(transactionId, "] Glass section exit - fading out header")); // Fade out header titles only (logo rotation handled in entry animation)
+
+        var _titleContainer = document.getElementById('dynamic-header-title-container');
+
+        if (_titleContainer) {
+          var _existingTitles = _titleContainer.querySelectorAll('.header-dynamic-title');
+
+          if (_existingTitles.length > 0) {
+            window.log('exitAnimation', "[EXIT #".concat(transactionId, "] Fading ").concat(_existingTitles.length, " header titles"));
+            gsap.to(_existingTitles, {
               autoAlpha: 0,
               xPercent: -100,
               // Exit to LEFT (reverse of entry from left)
@@ -690,58 +830,64 @@
 
       if (prevSection.id === 'banner' && window.animateBannerExit) {
         // 🚨 FIX: Banner exit animation
-        console.log("[EXIT DEBUG] Starting banner exit animation for ".concat(direction, " scroll"));
+        window.log('exitAnimation', "[EXIT DEBUG] Starting banner exit animation for ".concat(direction, " scroll"));
         window.animateBannerExit(prevSection);
         exitDuration = 0.6; // 📌 SIMPLE: Fixed 0.6s duration
 
-        console.log("[EXIT DEBUG] Banner exit duration set to: ".concat(exitDuration));
+        window.log('exitAnimation', "[EXIT DEBUG] Banner exit duration set to: ".concat(exitDuration));
       } else if (prevHasGlass) {
         // 🚨 FIX: Glass container sections - ALWAYS animate content out, conditionally animate container
-        console.log("[EXIT DEBUG] Starting glass section exit animation for ".concat(prevSection.id));
+        window.log('exitAnimation', "[EXIT DEBUG] Starting glass section exit animation for ".concat(prevSection.id));
 
         if (window.Portfolio.ui && window.Portfolio.ui.animateGlassContent) {
-          console.log("[EXIT DEBUG] Calling animateGlassContent(".concat(prevSection.id, ", false)"));
+          window.log('exitAnimation', "[EXIT DEBUG] Calling animateGlassContent(".concat(prevSection.id, ", false)"));
           window.Portfolio.ui.animateGlassContent(prevSection, false);
         } else {
-          console.log("[EXIT DEBUG] animateGlassContent function not found!");
+          window.log('exitAnimation', "[EXIT DEBUG] animateGlassContent function not found!");
         } // Only animate glass container if target doesn't have glass
 
 
         if (!bothHaveGlass && window.Portfolio.ui && window.Portfolio.ui.updateGlassContainer) {
-          console.log("[EXIT DEBUG] Both sections don't have glass - animating glass container out");
+          window.log('exitAnimation', "[EXIT DEBUG] Both sections don't have glass - animating glass container out");
           window.Portfolio.ui.updateGlassContainer(prevSection, false, targetSection);
           exitDuration = 0.8; // 📌 SIMPLE: Fixed 0.8s duration for glass container
         } else {
-          console.log("[EXIT DEBUG] Both sections have glass - keeping glass container, only animating content");
+          window.log('exitAnimation', "[EXIT DEBUG] Both sections have glass - keeping glass container, only animating content");
           exitDuration = 0.5; // 📌 SIMPLE: Fixed 0.5s duration for content only
         }
 
-        console.log("[EXIT DEBUG] Glass section exit duration set to: ".concat(exitDuration));
+        window.log('exitAnimation', "[EXIT DEBUG] Glass section exit duration set to: ".concat(exitDuration));
       } else if (window.animateSectionContent) {
         // Standard section exit animation (form)
-        console.log("[EXIT DEBUG] Starting standard section exit animation for ".concat(prevSection.id));
+        window.log('exitAnimation', "[EXIT DEBUG] Starting standard section exit animation for ".concat(prevSection.id));
         window.animateSectionContent(prevSection, false);
         exitDuration = 0.5; // 📌 SIMPLE: Fixed 0.5s duration
 
-        console.log("[EXIT DEBUG] Standard section exit duration set to: ".concat(exitDuration));
+        window.log('exitAnimation', "[EXIT DEBUG] Standard section exit duration set to: ".concat(exitDuration));
       } else {
-        console.log("[EXIT DEBUG] No exit animation function found for ".concat(prevSection.id, "!"));
+        window.log('exitAnimation', "[EXIT DEBUG] No exit animation function found for ".concat(prevSection.id, "!"));
       } // Wait for exit animation to complete, then hide section
 
 
-      console.log("[EXIT #".concat(transactionId, "] Setting delayed call for ").concat(exitDuration, "s to complete ").concat(prevSection.id, " exit"));
+      window.log('exitAnimation', "[EXIT #".concat(transactionId, "] Setting delayed call for ").concat(exitDuration, "s to complete ").concat(prevSection.id, " exit"));
       gsap.delayedCall(exitDuration, function () {
         // 🚀 Validate transaction before completing exit
         if (transactionId !== animationState.transactionId) {
-          console.log("[EXIT #".concat(transactionId, "] Delayed callback cancelled - transaction invalidated"));
+          window.log('exitAnimation', "[EXIT #".concat(transactionId, "] Delayed callback cancelled - transaction invalidated"));
           return;
         }
 
         gsap.set(prevSection, {
           visibility: 'hidden',
           display: 'none'
-        });
-        console.log("[EXIT COMPLETE #".concat(transactionId, "] ").concat(prevSection.id, " exit animation finished (").concat(direction, ")"));
+        }); // 🆕 RESET SERVICES ACCORDIONS when leaving Services section
+
+        if (prevSection.id === 'services' && window.Portfolio.effects && window.Portfolio.effects.resetServiceAccordions) {
+          window.log('sectionTransition', "[SERVICES #".concat(transactionId, "] Resetting accordions on exit"));
+          window.Portfolio.effects.resetServiceAccordions();
+        }
+
+        window.log('exitAnimation', "[EXIT COMPLETE #".concat(transactionId, "] ").concat(prevSection.id, " exit animation finished (").concat(direction, ")"));
         resolve();
       });
     });
@@ -759,7 +905,7 @@
         return;
       }
 
-      console.log("[ENTRY START #".concat(transactionId, "] ").concat(targetSection.id, " entry animation beginning"));
+      window.log('entryAnimation', "[ENTRY START #".concat(transactionId, "] ").concat(targetSection.id, " entry animation beginning"));
 
       if (isBanner) {
         // Banner entry animation
@@ -772,15 +918,16 @@
         gsap.delayedCall(CONFIG.animation.duration, function () {
           // 🚀 Validate transaction before resolving
           if (transactionId !== animationState.transactionId) {
-            console.log("[ENTRY #".concat(transactionId, "] Banner entry callback cancelled"));
+            window.log('entryAnimation', "[ENTRY #".concat(transactionId, "] Banner entry callback cancelled"));
             return;
           }
 
-          console.log("[ENTRY COMPLETE #".concat(transactionId, "] ").concat(targetSection.id, " entry animation finished"));
+          window.log('entryAnimation', "[ENTRY COMPLETE #".concat(transactionId, "] ").concat(targetSection.id, " entry animation finished"));
           resolve();
         });
       } else {
-        var hasGlassContainer = targetSection.id !== 'banner';
+        // 🆕 Services section doesn't use glass container (individual cards have their own glassmorphism)
+        var hasGlassContainer = targetSection.id !== 'banner' && targetSection.id !== 'services';
 
         if (hasGlassContainer) {
           // Pass prevSection to maintain "both have glass" logic
@@ -793,12 +940,12 @@
           var isFormSection = targetSection.id === 'form' || targetIndex === window.sectionCount - 1;
 
           if (targetIndex !== 0) {
-            console.log("[ENTRY #".concat(transactionId, "] Queueing arrow and header animation for section ").concat(targetIndex)); // 🔧 FIX: Don't rotate logo in form section (last section)
+            window.log('entryAnimation', "[ENTRY #".concat(transactionId, "] Queueing arrow and header animation for section ").concat(targetIndex)); // 🔧 FIX: Don't rotate logo in form section (last section)
 
             if (isFormSection) {
               // Form section - keep logo at 0 degrees (no rotation)
               logoRotationQueue.queueRotation(0);
-              console.log("[ENTRY #".concat(transactionId, "] Form section detected - logo rotation set to 0\xB0"));
+              window.log('entryAnimation', "[ENTRY #".concat(transactionId, "] Form section detected - logo rotation set to 0\xB0"));
             } else {
               // Other glass sections - rotate logo to -135 degrees
               logoRotationQueue.queueRotation(-135);
@@ -814,27 +961,57 @@
           gsap.delayedCall(CONFIG.glass.duration + CONFIG.animation.duration, function () {
             // 🚀 Validate transaction before resolving
             if (transactionId !== animationState.transactionId) {
-              console.log("[ENTRY #".concat(transactionId, "] Glass entry callback cancelled"));
+              window.log('entryAnimation', "[ENTRY #".concat(transactionId, "] Glass entry callback cancelled"));
               return;
             }
 
-            console.log("[ENTRY COMPLETE #".concat(transactionId, "] ").concat(targetSection.id, " glass container entry finished"));
+            window.log('entryAnimation', "[ENTRY COMPLETE #".concat(transactionId, "] ").concat(targetSection.id, " glass container entry finished")); // Note: Services auto-expand is now handled in non-glass path (Services doesn't use glass)
+
             resolve();
           });
         } else {
-          // Form section
+          // Non-glass sections (Form, Services) – ensure glass container is hidden when entering Services
+          if (targetSection.id === 'services' && window.Portfolio.ui && window.Portfolio.ui.updateGlassContainer) {
+            window.Portfolio.ui.updateGlassContainer(targetSection, false, prevSection, transactionId);
+          }
+
           if (window.animateSectionContent) {
             window.animateSectionContent(targetSection, true);
+          } // 🆕 ADD LOGO ROTATION FOR SERVICES SECTION
+
+
+          var _targetIndex = window.sections.indexOf(targetSection);
+
+          if (targetSection.id === 'services') {
+            // Services section HAS header - rotate logo to -135 degrees
+            logoRotationQueue.queueRotation(-135);
+            window.log('sectionTransition', "[SERVICES #".concat(transactionId, "] Logo rotation queued to -135\xB0 (has header)"));
+          } else {
+            // Form section DOESN'T have header - rotate logo to 0 degrees
+            logoRotationQueue.queueRotation(0);
+            window.log('sectionTransition', "[FORM #".concat(transactionId, "] Logo rotation queued to 0\xB0 (no header)"));
+          } // 🆕 ADD HEADER TITLE FOR SERVICES SECTION (it doesn't use glass container but still needs header)
+
+
+          if (targetSection.id === 'services' && window.Portfolio.ui && window.Portfolio.ui.addHeaderTitle) {
+            window.log('sectionTransition', "[SERVICES #".concat(transactionId, "] Adding header title for Services section"));
+            window.Portfolio.ui.addHeaderTitle(_targetIndex);
+          } // 🆕 AUTO-EXPAND SERVICES ACCORDIONS IMMEDIATELY (don't wait for other animations)
+
+
+          if (targetSection.id === 'services' && window.Portfolio.effects && window.Portfolio.effects.autoExpandServiceAccordions) {
+            window.log('sectionTransition', "[SERVICES #".concat(transactionId, "] Triggering auto-expansion immediately"));
+            window.Portfolio.effects.autoExpandServiceAccordions(transactionId);
           }
 
           gsap.delayedCall(CONFIG.animation.duration, function () {
             // 🚀 Validate transaction before resolving
             if (transactionId !== animationState.transactionId) {
-              console.log("[ENTRY #".concat(transactionId, "] Form entry callback cancelled"));
+              window.log('entryAnimation', "[ENTRY #".concat(transactionId, "] Standard entry callback cancelled"));
               return;
             }
 
-            console.log("[ENTRY COMPLETE #".concat(transactionId, "] ").concat(targetSection.id, " standard entry finished"));
+            window.log('entryAnimation', "[ENTRY COMPLETE #".concat(transactionId, "] ").concat(targetSection.id, " standard entry finished"));
             resolve();
           });
         }
@@ -847,10 +1024,10 @@
 
 
   function completeSectionTransition(index, CONFIG, transactionId) {
-    console.log("[TRANSITION COMPLETE #".concat(transactionId, "] Section ").concat(index, " transition finished")); // 🚀 Validate transaction
+    window.log('sectionTransition', "[TRANSITION COMPLETE #".concat(transactionId, "] Section ").concat(index, " transition finished")); // 🚀 Validate transaction
 
     if (transactionId !== animationState.transactionId) {
-      console.log("[TRANSITION COMPLETE #".concat(transactionId, "] Completion cancelled - transaction invalidated"));
+      window.log('sectionTransition', "[TRANSITION COMPLETE #".concat(transactionId, "] Completion cancelled - transaction invalidated"));
       return;
     } // 🚨 Show scroll buttons with proper delay to prevent flickering
 
@@ -858,7 +1035,7 @@
     gsap.delayedCall(0.2, function () {
       // 🚀 Validate transaction in delayed callback
       if (transactionId !== animationState.transactionId) {
-        console.log("[TRANSITION COMPLETE #".concat(transactionId, "] Scroll button update cancelled"));
+        window.log('sectionTransition', "[TRANSITION COMPLETE #".concat(transactionId, "] Scroll button update cancelled"));
         return;
       }
 
@@ -873,12 +1050,13 @@
     gsap.delayedCall(0.15, function () {
       // 🚀 Validate transaction before releasing lock
       if (transactionId !== animationState.transactionId) {
-        console.log("[TRANSITION COMPLETE #".concat(transactionId, "] Lock release cancelled"));
+        window.log('sectionTransition', "[TRANSITION COMPLETE #".concat(transactionId, "] Lock release cancelled"));
         return;
       }
 
+      document.body.classList.remove('section-transitioning');
       window.isAnimating = false;
-      console.log("[TRANSITION COMPLETE #".concat(transactionId, "] Animation lock released after lockout period"));
+      window.log('sectionTransition', "[TRANSITION COMPLETE #".concat(transactionId, "] Animation lock released after lockout period"));
 
       if (CONFIG.debug && window.logDebugInfo) {
         window.logDebugInfo("Navigation to section ".concat(index, " complete"));
@@ -890,7 +1068,7 @@
   function initializeSimpleState() {
     var currentSection = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : 0;
     simpleState.updateCurrent(currentSection);
-    console.log("[STATE] Simple state initialized with section ".concat(currentSection));
+    window.log('stateManagement', "[STATE] Simple state initialized with section ".concat(currentSection));
   } // Expose scroll functions and state
 
 
@@ -921,6 +1099,6 @@
   };
 
   if (window.Portfolio.debug) {
-    console.log('[SCROLL] Module loaded successfully with enhanced animation management');
+    window.log('initialization', '[SCROLL] Module loaded successfully with enhanced animation management');
   }
 })();

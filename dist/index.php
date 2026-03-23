@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset='utf-8'>
+        <meta http-equiv='X-UA-Compatible' content='IE=edge'>
+        <title>Michał Lachowski Front End Developer</title>
+        <meta name='viewport' content='width=device-width, initial-scale=1'>
+        
+        <!-- Favicons for all devices -->
+        <link rel="icon" type="image/x-icon" href="<?php echo get_template_directory_uri(); ?>/img/favicon/favicon.ico">
+        <link rel="icon" type="image/png" sizes="16x16" href="<?php echo get_template_directory_uri(); ?>/img/favicon/favicon-16x16.png">
+        <link rel="icon" type="image/png" sizes="32x32" href="<?php echo get_template_directory_uri(); ?>/img/favicon/favicon-32x32.png">
+        <link rel="apple-touch-icon" sizes="180x180" href="<?php echo get_template_directory_uri(); ?>/img/favicon/apple-touch-icon.png">
+        <meta name="theme-color" content="#ffffff">
+        
+        <!-- My stylesheet -->
+        <link rel='stylesheet' href='<?php echo get_stylesheet_uri(); ?>'>   
+
+        <!-- Font Awesome for icons -->
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+
+        <!-- Swiper's stylesheet 
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@8/swiper-bundle.min.css"/> 
+        -->
+    </head>
+<body> 
+<!-- Preloader -->
+<div id="preloader"></div>
+
+<video autoplay muted loop playsinline id="bg-video" preload="metadata">
+    <source src="<?php echo get_template_directory_uri(); ?>/4K.mp4" type="video/mp4">
+    Your browser does not support HTML5 video.
+</video> 
+<div class="overlay"></div>
+
+<!-- Fixed glass background container for all sections except banner -->
+<div class="section-glass-container"></div>
+
+<div id="header">
+    <div class="header page-limit">
+        <a href="#banner" class="logo-wrapper">
+            <svg version="1.2" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 303 302" width="70" height="70" id="headerLogo"> 
+              <style>
+                /* Static rounded square background */
+                #background {
+                  fill: #f1b247;
+                  rx: 40;  /* Corner radius */
+                  ry: 40;
+                }
+                /* Rotating arrow */
+                #arrowGroup {
+                  transform-origin: 26% 40%; /* Perfect center rotation */
+                }
+                #arrow {
+                  fill: #141415;
+                }
+              </style>
+              
+              <!-- Rounded square background -->
+              <rect id="background" width="303" height="302"/>
+              
+              <!-- Arrow group for rotation from center -->
+              <g id="arrowGroup">
+                <!-- Split into two separate paths for perfect alignment -->
+                <path id="arrow1" d="M124.3 45.5l-12.9 13.1c-0.4 118.2-0.3 123.2 1.4 126.4 0.9 1.9 3.3 4.5 5.2 5.8l3.5 2.3 124-0.2c22.1-21.9 25.5-25.9 25.1-27.2-0.6-1.6-4.5-1.7-63.1-1.7h-62.5l-5-6c0-112.3-0.2-121.8-1.4-123.5-1.4-1.9-2.1-1.4-14.3 11z" />
+                <path id="arrow2" d="M79.5 83.4l-13.6 13.6c0.6 129.7 0.6 130.5 2.7 133.5 1.2 1.7 3.7 3.8 5.8 4.7 3.3 1.7 8.7 1.8 67.8 1.8h64.3c23.4-23.2 26.6-26.9 26.1-28.3-0.6-1.6-4.6-1.7-65.3-1.7-49.4-0.1-65.2-0.4-66.3-1.3-0.8-0.7-2.2-2.1-3-3.1-1.3-1.6-1.6-11.2-2-66.9-0.4-47.9-0.8-65.1-1.7-65.4-0.6-0.3-7.3 5.7-14.8 13.1z" />
+              </g>
+            </svg>
+        </a> 
+        <div id="dynamic-header-title-container"></div>
+        <div id="navbar" class="menu-wrapper page-limit">
+            <div id="menuToggle">
+                <ul class="menu">
+                    <a href="#banner" class="underline option selected">
+                        HOME
+                    </a>
+                    <a href="#about" class="underline option">
+                        ABOUT ME
+                    </a>  
+
+                    <a href="#form" class="underline option">
+                        CONTACT 
+                    </a>
+                </ul>
+            </div>
+        </div> 
+    </div>
+</div>   
+
+
+
+    <section id="banner" class="section">
+        <div class="headline-wrapper page-limit">
+            <div class="headline-text">
+                <h1>Hi,<br> I'm <span class="highlight-word">Freelancer</span></h1>
+                <h2>Looking for <span class="highlight-word">opportunity</span> <br>to bring <span class="highlight-word">your</span> designs to <span class="highlight-word">life</span></h2>
+                <a href="#form" class="btn">Let's Talk</a>
+            </div> 
+        </div>
+    </section>
+ 
+    <section id="about" class="section">
+        <div class="about-wrapper page-limit">
+            <div class="about-wrapper-headline">
+                <div class="headline">
+                    <h1>About</h1>
+                </div>
+                <div class="about-text">
+                    <p>Looking for precise <span class="highlight-word">design-to-code</span> implementation?
+                    </p>
+                    <p>
+                        I transform your vision into seamless, <span class="highlight-word">responsive websites </span>with <span class="highlight-word">clean code</span> and professional WordPress integration.<br> </span>
+                    </p>
+                    <p><a href="#form" class="cta-link">Let's build something <span class="highlight-word glow-word">yours</span>.</a>
+                    </p>
+                </div>
+            </div>
+            <div id="technologies">
+                <div class="box lighter">
+                    <img src="<?php echo get_template_directory_uri(); ?>/img/html5.png">
+                    <h4>HTML</h4>
+                </div> 
+                <div class="box">
+                    <img src="<?php echo get_template_directory_uri(); ?>/img/css3.png">
+                    <h4>CSS</h4>
+                </div>
+                <div class="box">
+                    <img src="<?php echo get_template_directory_uri(); ?>/img/js.png">
+                    <h4>JavaScript</h4>
+                </div>
+                <div class="box">
+                    <img src="<?php echo get_template_directory_uri(); ?>/img/wordpress.png">
+                    <h4>WordPress</h4>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="services" class="section"> 
+        <div class="services-wrapper page-limit">
+            <div class="headline">
+                <h1>Services</h1>
+            </div>
+            
+            <!-- Service Categories Grid - 3 Main Groups -->
+            <div class="service-categories-grid">
+                
+                <!-- Category 1: Design-to-Code Implementation -->
+                <article class="service-category" data-category="design-to-code">
+                    <button class="category-header" aria-expanded="false" aria-controls="category-design-content">
+                        <div class="category-icon">🎨</div>
+                        <div class="category-text">
+                            <h3 class="category-title">Design-to-Code Implementation</h3>
+                            <p class="category-tagline">From concept to pixel-perfect reality</p>
+                        </div>
+                        <span class="category-toggle" aria-hidden="true">+</span>
+                    </button>
+                    <div class="category-content" id="category-design-content" aria-hidden="true">
+                        <ul class="service-list">
+                            <li class="service-item">
+                                <span class="service-icon">✓</span>
+                                <div class="service-text">
+                                    <strong>Pixel-perfect coding</strong> from Figma, Photoshop, or Adobe XD
+                                </div>
+                            </li>
+                            <li class="service-item">
+                                <span class="service-icon">✓</span>
+                                <div class="service-text">
+                                    <strong>Responsive Web Development</strong> with mobile-first approach
+                                </div>
+                            </li>
+                            <li class="service-item">
+                                <span class="service-icon">✓</span>
+                                <div class="service-text">
+                                    <strong>Semantic HTML5 structure</strong> for accessibility and SEO
+                                </div>
+                            </li>
+                        </ul>
+                        <a href="#form" class="category-cta">Start Your Project</a>
+                    </div>
+                </article>
+
+                <!-- Category 2: WordPress & API Integrations -->
+                <article class="service-category" data-category="wordpress-api">
+                    <button class="category-header" aria-expanded="false" aria-controls="category-wordpress-content">
+                        <div class="category-icon">💻</div>
+                        <div class="category-text">
+                            <h3 class="category-title">WordPress & API Integrations</h3>
+                            <p class="category-tagline">Custom solutions & external connections</p>
+                        </div>
+                        <span class="category-toggle" aria-hidden="true">+</span>
+                    </button>
+                    <div class="category-content" id="category-wordpress-content" aria-hidden="true">
+                        <ul class="service-list">
+                            <li class="service-item">
+                                <span class="service-icon">✓</span>
+                                <div class="service-text">
+                                    <strong>WordPress Theme Customization</strong> from scratch or existing themes
+                                </div>
+                            </li>
+                            <li class="service-item">
+                                <span class="service-icon">✓</span>
+                                <div class="service-text">
+                                    <strong>API Integrations</strong> with payment systems, CRM, and external services
+                                </div>
+                            </li>
+                            <li class="service-item">
+                                <span class="service-icon">✓</span>
+                                <div class="service-text">
+                                    <strong>Admin panel integration</strong> with required functionality
+                                </div>
+                            </li>
+                        </ul>
+                        <a href="#form" class="category-cta">Discuss Integration</a>
+                    </div>
+                </article>
+
+                <!-- Category 3: Modern Frameworks & Performance -->
+                <article class="service-category" data-category="frameworks-performance">
+                    <button class="category-header" aria-expanded="false" aria-controls="category-performance-content">
+                        <div class="category-icon">⚡</div>
+                        <div class="category-text">
+                            <h3 class="category-title">Modern Frameworks & Performance</h3>
+                            <p class="category-tagline">Speed, optimization, and modern tech</p>
+                        </div>
+                        <span class="category-toggle" aria-hidden="true">+</span>
+                    </button>
+                    <div class="category-content" id="category-performance-content" aria-hidden="true">
+                        <ul class="service-list">
+                            <li class="service-item">
+                                <span class="service-icon">✓</span>
+                                <div class="service-text">
+                                    <strong>Website Performance Optimization</strong> — Core Web Vitals & speed
+                                </div>
+                            </li>
+                            <li class="service-item">
+                                <span class="service-icon">✓</span>
+                                <div class="service-text">
+                                    <strong>UI/UX Animations with GSAP</strong> for smooth micro-interactions
+                                </div>
+                            </li>
+                            <li class="service-item">
+                                <span class="service-icon">✓</span>
+                                <div class="service-text">
+                                    <strong>Modern frameworks</strong> — React, Vue, Astro, Eleventy
+                                </div>
+                            </li>
+                        </ul>
+                        <a href="#form" class="category-cta">Optimize Your Site</a>
+                    </div>
+                </article>
+
+                
+
+            </div>
+        </div>
+    </section>
+
+    <section id="portfolio" class="section">
+        <div class="portfolio-wrapper page-limit">
+            <div class="headline">
+                <h1>Portfolio</h1>
+            </div>
+            <!-- Portfolio content - work in progress -->
+            <div class="portfolio-content">
+                <div class="left">
+                    <h1>Aleksandra Lachowska</h1>
+                    <h3>Dietitian Website — Design-to-Code Implementation & WordPress Engineering</h3>
+                    <p>
+                        Implemented a pre-designed UI into a fully functional custom WordPress build, focusing on performance, responsiveness, and maintainable architecture. <br>Delivered a production-ready website with optimized <br>structure, clean code, and scalable <br>content management.
+                    </p>
+                    <div id="mockup">
+                        <img src="<?php echo get_template_directory_uri(); ?>/img/MockUpFinal.png" alt="Aleksandra Lachowska Website Mockup">
+                    </div>
+                </div>
+                <div class="portfolio-divider" aria-hidden="true"></div>
+                <div class="right">
+                    <section class="portfolio-block">
+                        <h4>Overview</h4>
+                        <p>
+                            Implemented a pre-designed UI into a custom WordPress build, ensuring performance, responsiveness, and clean architecture.
+                        </p>
+                    </section>
+                
+                    <section class="portfolio-block">
+                        <h4>My Role</h4>
+                        <ul>
+                            <li>WordPress Developer</li>
+                            <li>Frontend Implementation</li>
+                            <li>Technical SEO & Performance Optimization</li>
+                        </ul>
+                    </section>
+                
+                    <section class="portfolio-block">
+                        <h4>Tech Stack</h4>
+                        <ul class="tech-stack">
+                            <li>WordPress (Custom Theme Development)</li>
+                            <li>Custom Content Architecture</li>
+                            <li>JavaScript (AJAX, GSAP Animations)</li>
+                            <li>ACF & Flexible Content</li>
+                        </ul>
+                    </section>
+
+                    <section class="portfolio-block">
+                        <h4>Key Contributions</h4>
+                        <ul class="key-wins">
+                            <li>
+                                <strong>Frontend Implementation</strong>
+                                <span>Pixel-perfect build from provided design</span>
+                            </li>
+                            <li>
+                                <strong>Wordpress Integration</strong>
+                                <span>Custom theme architecture & CMS integration</span>
+                            </li>
+                            <li>
+                                <strong>Dynamic Content Setup</strong>
+                                <span>Flexible layouts & reusable content sections</span>
+                            </li>
+                            <li>
+                                <strong>Performance Optimization</strong>
+                                <span>Clean code, asset optimization & responsiveness</span>
+                            </li>
+                        </ul>
+                    </section>
+                
+                    <div class="portfolio-next">
+                        <a href="https://lachowskaaleksandra.pl" target="_blank" class="btn">
+                            View Project
+                        </a>
+                    </div>
+                </div>
+        </div>
+    </section>
+
+    <section id="form" class="section">
+        <div class="wrapper page-limit">
+            <div class="form-wrapper">
+                <!-- LEFT SIDE: Form with gradient border -->
+                <div class="form-left">
+                    <div class="form-container">
+                        <form action="https://formspree.io/f/meqydzll" method="POST">
+                            <div class="input-wrapper">
+                                <i class="fa fa-user input-icon"></i>
+                                <input type="text" name="name" placeholder="Your Name" autocomplete="name">
+                            </div>
+                            <div class="input-wrapper">
+                                <i class="fa fa-envelope input-icon"></i>
+                                <input type="email" name="_replyto" placeholder="Your Email" autocomplete="email">
+                            </div>
+                            <div class="input-wrapper">
+                                <i class="fa fa-comment input-icon"></i>
+                                <textarea name="message" placeholder="Message" autocomplete="off"></textarea>
+                            </div>
+                            <div class="button-wrapper">
+                                <button type="submit" class="btn">SEND</button>
+                                <span class="button-subtext">I'll get back to you within 24 hours</span>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+                
+                <!-- RIGHT SIDE: Let's Work Together -->
+                <div class="form-right">
+                    <h2 class="form-main-heading">Let's Work Together</h2>
+                    <p class="form-description">
+                        <i class="fa fa-comment-o"></i> Have a project in mind or any questions?<br>
+                        <i class="fa fa-hand-o-right"></i> I'm here to help. Feel free to reach out!
+                    </p>
+                </div>
+            </div> 
+        </div>
+
+    </section>  
+
+
+
+<footer>
+</footer> 
+<!-- GSAP and ScrollTrigger -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/ScrollTrigger.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollToPlugin.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/Observer.min.js"></script>
+
+<!-- Scripts at the end of body -->
+<script src="<?php echo get_template_directory_uri(); ?>/js/i18n.js"></script>
+<script src="<?php echo get_template_directory_uri(); ?>/js/script.js"></script>
+
+<!-- Persistent UI Elements -->
+<div class="socials">
+    <span id="line"></span>
+    <a href="https://www.linkedin.com/in/micha%C5%82-lachowski-5a227614a/" target="_blank"><img src="<?php echo get_template_directory_uri(); ?>/img/linkedin.png"></a>
+    <a href="https://www.upwork.com/freelancers/~015492513b3724189a" target="_blank"><img src="<?php echo get_template_directory_uri(); ?>/img/upwork.png"></a>
+</div>
+<div class="scroll-down">
+    <a href="#about" class="scroll-btn"><img src="<?php echo get_template_directory_uri(); ?>/img/scroll-btn.png"></a> 
+    <a href="#about" class="scroll-btn-arrow"><img src="<?php echo get_template_directory_uri(); ?>/img/scroll-btn-arrow.png"></a>  
+</div>
+<div class="scroll-up"> 
+    
+    <a href="#banner" class="scroll-btn"><img src="<?php echo get_template_directory_uri(); ?>/img/scroll-btn.png"></a>  
+    <a href="#banner" class="scroll-btn-arrow"><img src="<?php echo get_template_directory_uri(); ?>/img/scroll-btn-arrow.png"></a> 
+</div>
+<button id="language-toggle" class="language-toggle" type="button" aria-label="Switch language">
+    <span class="language-toggle-label">PL</span>
+</button>
+
+<!-- Section Dot Navigation -->
+<div class="section-dots"></div>
+
+<!-- Scroll Toast Notification (Desktop Only) -->
+<div id="scroll-toast" class="scroll-toast">
+  <span class="scroll-toast-icon"></span>
+  <span class="scroll-toast-text"></span>
+</div>
+
+</body> 
+</html>       

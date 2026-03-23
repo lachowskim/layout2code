@@ -1,18 +1,7 @@
-$colors-stack: (
-    black: (#000000, #121212, #151515, #4f4942),
-    grey: (#f2f2f2, #838383),
-    white: (#ffffff, #f7f7f7),
-    brown: (#707070, #535353),
-    green: (#81a57F, rgb(111, 145, 111), #d6ddd5, #eceeec),
-    dark-green: (#80a47e, #6e8f6c),
-    purple: (#e72d76, #623989, #8c5db0, #9c2e74),
-    orange: (#db6400, #ffa62b, #f1b247, #b88674, #9b6a59, #d87a5c),
-    blue: (blue, blue)
-);
-
 @use "sass:map";
 @use "sass:list";
 
+// Single source of truth for theme colors (used by get-color())
 $colors-stack: (
     black: (#000000, #121212, #151515, #4f4942),
     grey: (#f2f2f2, #838383),

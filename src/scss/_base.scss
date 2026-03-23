@@ -1,39 +1,27 @@
-$colors-stack: (
-    black: (#000000, #121212, #151515, #4f4942),
-    grey: (#f2f2f2, #838383),
-    white: (#ffffff, #f7f7f7),
-    brown: (#707070, #535353),
-    green: (#81a57F, rgb(111, 145, 111), #d6ddd5, #eceeec),
-    dark-green: (#80a47e, #6e8f6c),
-    purple: (#e72d76, #623989, #8c5db0, #9c2e74),
-    orange: (#db6400, #ffa62b, #f1b247, #b88674, #9b6a59, #d87a5c),
-    blue: (blue, blue)
-);
-
 @use "functions";
 @use "reset";
 
+// Flexbox utility mixin - use to replace repeated display: flex blocks
+@mixin flex($dir: row, $align: center, $justify: center) {
+  display: -webkit-flex;
+  display: flex;
+  -webkit-flex-direction: $dir;
+  flex-direction: $dir;
+  -webkit-align-items: $align;
+  align-items: $align;
+  -webkit-justify-content: $justify;
+  justify-content: $justify;
+}
+
 @import url('https://fonts.googleapis.com/css2?family=Lato:ital,wght@0,100;0,300;0,400;0,700;0,900;1,100;1,300;1,400;1,700;1,900&display=swap');
-
-
-
-$colors-stack: (
-    black: (#000000, #121212, #151515, #4f4942),
-    grey: (#f2f2f2, #838383),
-    white: (#ffffff, #f7f7f7),
-    brown: (#707070, #535353),
-    green: (#81a57F, rgb(111, 145, 111), #d6ddd5, #eceeec),
-    dark-green: (#80a47e, #6e8f6c),
-    purple: (#e72d76, #623989, #8c5db0, #9c2e74),
-    orange: (#db6400, #ffa62b, #f1b247, #b88674, #9b6a59, #d87a5c),
-    blue: (blue, blue)
-);
+@import url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=DM+Serif+Text:ital@0;1&family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap');
 
 $base-font-size: calc(.12vw + 1rem);
-$base-font-weight: 700;
-$base-font-family: "Lato", sans-serif;
-$header-font-family: "Lato", sans-serif;
-$header-font-size: calc(2.16vw + 1rem);
+$base-font-weight: 700;  
+$base-font-family: "Inter", sans-serif;
+$header-font-family: "Inter", sans-serif;
+$header-font-size: calc(2.14vw + 1rem);
 $header-font-weight: 700;
 $default-animation: 0.3s ease-in;  
 
@@ -227,6 +215,10 @@ section {
 
 
 
+// Configurable button border settings
+$btn-border-thickness: 3px;
+$btn-border-animated: true;
+
 .btn {
     display: flex;
     align-items: center;
@@ -239,33 +231,50 @@ section {
     font-weight: 700;
 	font-family: $base-font-family;
     font-size: 18px;
-    overflow: hidden;
-    border: 3px solid #F1B247;
     text-transform: uppercase;
     position: relative;
-    z-index: 1;
     cursor: pointer;
     text-decoration: none;
+    border: none;
+    transition: background-color 0.3s ease, color 0.3s ease;
 
+    // Gradient border using ::before
     &::before {
-        content: "";
+        content: '';
         position: absolute;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background-color: #F1B247;
+        inset: 0;
+        border-radius: 4px;
+        padding: $btn-border-thickness;
+        background: linear-gradient(135deg, #db7d12 0%, #818181 25%, #e68f0d 50%, #4e4e4e 75%, #f18407 100%);
+        background-size: 200% 200%;
+        -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+        -webkit-mask-composite: xor;
+        mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+        mask-composite: exclude;
+        pointer-events: none;
         z-index: -1;
-        clip-path: circle(0% at var(--x, 50%) var(--y, 50%));
-        transition: clip-path 0.45s ease-out;
+        
+        @if $btn-border-animated {
+            animation: btnBorderRotate 8s ease-in-out infinite;
+        }
     }
 
     &:hover {
+        background-color: #F1B247;
         color: white;
     }
+}
 
-    &.radial-hover::before {
-        clip-path: circle(150% at var(--x, 50%) var(--y, 50%));
+// Animation for rotating gradient border
+@keyframes btnBorderRotate {
+    0% { 
+        background-position: 0% 50%; 
+    }
+    50% { 
+        background-position: 100% 50%; 
+    }
+    100% { 
+        background-position: 0% 50%; 
     }
 }
 

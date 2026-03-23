@@ -43,7 +43,7 @@
         visibility: "visible",
         display: "block",
         scale: 1,
-        height: window.CONFIG.glass.height
+        height: window.getGlassHeight ? window.getGlassHeight() : window.CONFIG.glass.height
       });
     } // Add extra class to reinforce CSS rule
 
@@ -62,7 +62,7 @@
     var glassContainer = document.querySelector('.section-glass-container');
 
     if (!glassContainer) {
-      console.log('[GLASS CONTAINER] No glass container found!');
+      window.log('glassContainer', '[GLASS CONTAINER] No glass container found!');
       return;
     } // 🚀 Get current transaction ID if not provided
 
@@ -71,18 +71,18 @@
       transactionId = window.Portfolio.scroll.getCurrentTransactionId();
     }
 
-    console.log("[GLASS CONTAINER #".concat(transactionId, "] updateGlassContainer called: section=").concat(section ? section.id : 'null', ", isVisible=").concat(isVisible, ", prevSection=").concat(prevSection ? prevSection.id : 'null')); // 🚀 Priority 2: Check if we're at a stable point before interrupting
+    window.log('glassContainer', "[GLASS CONTAINER #".concat(transactionId, "] updateGlassContainer called: section=").concat(section ? section.id : 'null', ", isVisible=").concat(isVisible, ", prevSection=").concat(prevSection ? prevSection.id : 'null')); // 🚀 Priority 2: Check if we're at a stable point before interrupting
 
     var currentScale = gsap.getProperty(glassContainer, 'scale');
     var isStablePoint = currentScale > 0.5 || currentScale === 0 || currentScale === 1;
 
     if (!isStablePoint) {
-      console.log("[GLASS CONTAINER #".concat(transactionId, "] Not at stable point (scale: ").concat(currentScale.toFixed(2), ") - waiting...")); // Wait for stable point before changing animation
+      window.log('glassContainer', "[GLASS CONTAINER #".concat(transactionId, "] Not at stable point (scale: ").concat(currentScale.toFixed(2), ") - waiting...")); // Wait for stable point before changing animation
 
       gsap.delayedCall(0.15, function () {
         // 🚀 Validate transaction after delay
         if (transactionId && window.Portfolio.scroll && transactionId !== window.Portfolio.scroll.getCurrentTransactionId()) {
-          console.log("[GLASS CONTAINER #".concat(transactionId, "] Transaction invalidated during wait"));
+          window.log('glassContainer', "[GLASS CONTAINER #".concat(transactionId, "] Transaction invalidated during wait"));
           return;
         }
 
@@ -92,10 +92,10 @@
     } // Kill any existing animations
 
 
-    gsap.killTweensOf(glassContainer); // Immediately hide if section is banner
+    gsap.killTweensOf(glassContainer); // Immediately hide if section is banner or services (services doesn't use glass container)
 
-    if (section && section.id === 'banner') {
-      console.log('[GLASS CONTAINER DEBUG] Target is banner - hiding glass container immediately');
+    if (section && (section.id === 'banner' || section.id === 'services')) {
+      window.log('glassContainer', "[GLASS CONTAINER DEBUG] Target is ".concat(section.id, " - hiding glass container immediately"));
       gsap.set(glassContainer, {
         opacity: 0,
         visibility: "hidden",
@@ -103,29 +103,45 @@
         scale: 0
       });
       return;
-    } // 📌 NEW: Check if both current and previous sections have glass containers (only exclude banner)
+    } // 📌 NEW: Check if both current and previous sections have glass containers (exclude banner and services)
 
 
-    var bothHaveGlass = prevSection && prevSection.id !== 'banner' && section.id !== 'banner';
-    console.log("[GLASS CONTAINER DEBUG] bothHaveGlass calculation: ".concat(bothHaveGlass, " (prevSection: ").concat(prevSection ? prevSection.id : 'null', ", section: ").concat(section ? section.id : 'null', ")"));
+    var bothHaveGlass = prevSection && prevSection.id !== 'banner' && prevSection.id !== 'services' && section.id !== 'banner' && section.id !== 'services';
+    window.log('glassContainer', "[GLASS CONTAINER DEBUG] bothHaveGlass calculation: ".concat(bothHaveGlass, " (prevSection: ").concat(prevSection ? prevSection.id : 'null', ", section: ").concat(section ? section.id : 'null', ")"));
 
     if (!isVisible) {
-      console.log("[GLASS CONTAINER DEBUG] EXIT MODE - isVisible=false"); // 🚨 FIX: EXIT SEQUENCE using consistent animateGlassContent function
+      window.log('glassContainer', "[GLASS CONTAINER DEBUG] EXIT MODE - isVisible=false"); // Portfolio exit: animate height and max-width back to default first
+
+      var isLeavingPortfolio = section && section.id === 'portfolio';
+      var targetSection = prevSection; // In exit mode, prevSection arg is the target section
+
+      var shouldResizeBeforeCollapse = isLeavingPortfolio && targetSection && targetSection.id === 'form';
+
+      if (shouldResizeBeforeCollapse) {
+        gsap.to(glassContainer, {
+          height: window.getGlassHeight ? window.getGlassHeight() : window.CONFIG.glass.height,
+          maxWidth: '1400px',
+          duration: 0.4,
+          ease: 'power2.inOut'
+        });
+      } // 🚨 FIX: EXIT SEQUENCE using consistent animateGlassContent function
+
 
       if (!bothHaveGlass) {
-        console.log("[GLASS CONTAINER DEBUG] !bothHaveGlass - Will animate glass container OUT"); // Step 1: Animate content out using animateGlassContent for consistency
+        window.log('glassContainer', "[GLASS CONTAINER DEBUG] !bothHaveGlass - Will animate glass container OUT"); // Step 1: Animate content out using animateGlassContent for consistency
 
         if (section) {
-          console.log("[GLASS CONTAINER DEBUG] Step 1: Animating content out for ".concat(section.id));
+          window.log('glassContainer', "[GLASS CONTAINER DEBUG] Step 1: Animating content out for ".concat(section.id));
           animateGlassContent(section, false);
         } // Step 2: Collapse the container with improved animation
 
 
-        var delay = 0.2; // 📌 SIMPLE: Fixed 0.2s delay instead of complex calculation
+        var delay = shouldResizeBeforeCollapse ? 0.45 : 0.2; // Only wait when resizing to form dimensions
 
-        console.log("[GLASS CONTAINER DEBUG] Step 2: Setting ".concat(delay, "s delay before collapsing glass container"));
+        window.log('glassContainer', "[GLASS CONTAINER DEBUG] Step 2: Setting ".concat(delay, "s delay before collapsing glass container"));
         gsap.delayedCall(delay, function () {
-          console.log("[GLASS CONTAINER DEBUG] Starting glass container collapse animation"); // 🚨 FIX: Disable CSS transitions to prevent conflicts with GSAP
+          window.log('glassContainer', "[GLASS CONTAINER DEBUG] Starting glass container collapse animation");
+          glassContainer.classList.add('glass-transitioning'); // 🚨 FIX: Disable CSS transitions to prevent conflicts with GSAP
 
           gsap.set(glassContainer, {
             transition: "none" // Override CSS transition that causes conflicts
@@ -139,10 +155,11 @@
             ease: "power2.in",
             transformOrigin: "center center",
             onStart: function onStart() {
-              return console.log("[GLASS CONTAINER DEBUG] Glass container collapse started - scale to 0.8 ONLY");
+              return window.log('glassContainer', "[GLASS CONTAINER DEBUG] Glass container collapse started - scale to 0.8 ONLY");
             },
             onComplete: function onComplete() {
-              // CLEANUP: Reset WITHOUT breaking CSS centering
+              glassContainer.classList.remove('glass-transitioning'); // CLEANUP: Reset WITHOUT breaking CSS centering
+
               gsap.set(glassContainer, {
                 visibility: "hidden",
                 display: "none",
@@ -151,62 +168,95 @@
                 // CRITICAL: Clear any Y transforms that break centering
                 transition: ""
               });
-              console.log('[GLASS CONTAINER] Exit animation complete - collapsed with centering preserved');
+              window.log('glassContainer', '[GLASS CONTAINER] Exit animation complete - collapsed with centering preserved');
             }
           });
         });
       } else {
-        console.log("[GLASS CONTAINER DEBUG] bothHaveGlass=true - Only animating content, keeping glass container"); // Both sections have glass - just animate content out
+        window.log('glassContainer', "[GLASS CONTAINER DEBUG] bothHaveGlass=true - Only animating content, keeping glass container"); // Both sections have glass - just animate content out
 
         if (section) {
           animateGlassContent(section, false);
         }
       }
     } else {
-      console.log("[GLASS CONTAINER DEBUG] ENTRY MODE - isVisible=true"); // 📌 ENTRY SEQUENCE: Container expands first, then content fades in
+      window.log('glassContainer', "[GLASS CONTAINER DEBUG] ENTRY MODE - isVisible=true"); // 📌 ENTRY SEQUENCE: Container expands first, then content fades in
       // Show container - but never for banner (form now gets glass container)
 
       if (section && section.id !== 'banner') {
         if (!bothHaveGlass) {
-          console.log("[GLASS CONTAINER DEBUG] !bothHaveGlass - Will animate glass container IN"); // Step 1: Expand container from center
+          window.log('glassContainer', "[GLASS CONTAINER DEBUG] !bothHaveGlass - Will animate glass container IN"); // Portfolio: set final size upfront so expand and resize are one go
 
+          var isPortfolio = section.id === 'portfolio';
           gsap.set(glassContainer, {
             visibility: "visible",
             display: "block",
-            height: window.CONFIG.glass.height,
+            height: isPortfolio ? '700px' : window.getGlassHeight ? window.getGlassHeight() : window.CONFIG.glass.height,
+            maxWidth: isPortfolio ? '1500px' : undefined,
             opacity: 0,
             scale: 0,
             // 📌 Start from center
             transformOrigin: "center center"
           });
-          console.log("[GLASS CONTAINER DEBUG] Starting glass container expand animation");
+          window.log('glassContainer', "[GLASS CONTAINER DEBUG] Starting glass container expand animation");
+          glassContainer.classList.add('glass-transitioning');
           gsap.to(glassContainer, {
             opacity: 1,
             scale: 1,
-            // 📌 Expand to full size
+            // 📌 Expand to full size (already at portfolio size if portfolio)
             duration: window.CONFIG.glass.duration,
             ease: "back.out(1.02)",
             onStart: function onStart() {
-              return console.log("[GLASS CONTAINER DEBUG] Glass container expand started");
+              return window.log('glassContainer', "[GLASS CONTAINER DEBUG] Glass container expand started");
             },
             onComplete: function onComplete() {
-              console.log("[GLASS CONTAINER DEBUG] Glass container expand complete - now animating content"); // Step 2: Then animate content in
-
+              glassContainer.classList.remove('glass-transitioning');
+              window.log('glassContainer', "[GLASS CONTAINER DEBUG] Glass container expand complete - now animating content");
               animateGlassContent(section, true);
             }
           });
         } else {
-          console.log("[GLASS CONTAINER DEBUG] bothHaveGlass=true - Skipping container animation, only animating content"); // 📌 Both sections have glass - skip container animation
+          window.log('glassContainer', "[GLASS CONTAINER DEBUG] bothHaveGlass=true - Skipping container animation, only animating content"); // 📌 Both sections have glass - one tween for both dimensions so they resize in sync
 
+          var _isPortfolio = section.id === 'portfolio';
+
+          var isFromPortfolio = prevSection && prevSection.id === 'portfolio';
           gsap.set(glassContainer, {
             visibility: "visible",
             display: "block",
-            height: window.CONFIG.glass.height,
             opacity: 1,
             scale: 1
-          }); // Just animate content
+          });
 
-          animateGlassContent(section, true);
+          if (_isPortfolio) {
+            gsap.set(glassContainer, {
+              height: window.getGlassHeight ? window.getGlassHeight() : window.CONFIG.glass.height,
+              maxWidth: '1400px'
+            });
+            gsap.to(glassContainer, {
+              height: '700px',
+              maxWidth: '1500px',
+              duration: 0.4,
+              ease: 'power2.inOut',
+              overwrite: true,
+              onComplete: function onComplete() {
+                return animateGlassContent(section, true);
+              }
+            });
+          } else if (isFromPortfolio) {
+            // Resize already starts during portfolio exit; avoid a second staged resize on entry.
+            gsap.set(glassContainer, {
+              height: window.getGlassHeight ? window.getGlassHeight() : window.CONFIG.glass.height,
+              maxWidth: '1400px'
+            });
+            animateGlassContent(section, true);
+          } else {
+            gsap.set(glassContainer, {
+              height: window.getGlassHeight ? window.getGlassHeight() : window.CONFIG.glass.height,
+              maxWidth: '1400px'
+            });
+            animateGlassContent(section, true);
+          }
         }
       }
     }
@@ -219,39 +269,42 @@
   function animateGlassContent(section, isEntering) {
     if (!section) return; // 📌 DEBUG: Log glass content animation
 
-    console.log("[GLASS CONTENT] animateGlassContent called for ".concat(section.id, ", isEntering: ").concat(isEntering));
-    var contentSelectors = '.headline, .headline h1, .headline h2, .headline p, .headline .btn, .about-wrapper, .portfolio-wrapper, .form-wrapper, .services-wrapper, .flip-cards-container, .service-categories-grid';
-    var elements = section.querySelectorAll(contentSelectors); // 🚨 PORTFOLIO FIX: Also disable CSS transitions on Portfolio image elements that cause hickups
+    window.log('glassContainer', "[GLASS CONTENT] animateGlassContent called for ".concat(section.id, ", isEntering: ").concat(isEntering)); // Note: .service-categories-grid removed - Services section doesn't use glass container
 
-    var portfolioImageElements = section.querySelectorAll('.portfolio-image-wrapper img, .text-portfolio div');
-    if (elements.length === 0) return; // 📌 FIXED: Kill any existing animations to prevent conflicts and timing issues
+    var contentSelectors = '.headline, .headline h1, .headline h2, .headline p, .headline .btn, .about-wrapper, .portfolio-wrapper, .form-wrapper, .form-left, .form-right, .services-wrapper, .flip-cards-container';
+    var elements = section.querySelectorAll(contentSelectors);
+    var isPortfolioSection = section.id === 'portfolio';
+    var portfolioDivider = isPortfolioSection ? section.querySelector('.portfolio-divider') : null;
+    var portfolioImageElements = isPortfolioSection ? section.querySelectorAll('#mockup img, .portfolio-next .btn') : [];
+    if (elements.length === 0) return;
+    var entryScale = isPortfolioSection ? 1 : 0.97;
+    var exitScale = isPortfolioSection ? 1 : 0.97; // 📌 FIXED: Kill any existing animations to prevent conflicts and timing issues
 
     gsap.killTweensOf(elements); // 🚨 FIX: Disable CSS transitions to prevent conflicts with GSAP
 
     gsap.set(elements, {
       transition: "none" // Override any CSS transitions that cause conflicts
 
-    }); // 🚨 PORTFOLIO FIX: Also disable CSS transitions on Portfolio-specific elements
-
-    if (portfolioImageElements.length > 0) {
-      gsap.set(portfolioImageElements, {
-        transition: "none" // Override Portfolio image transitions that cause hickups
-
-      });
-      console.log("[GLASS CONTENT] Disabled CSS transitions on ".concat(portfolioImageElements.length, " Portfolio image elements for ").concat(section.id));
-    }
+    });
 
     if (isEntering) {
-      // Set initial state
-      console.log("[GLASS CONTENT] Setting initial state with y: 12 for ".concat(section.id));
+      // Portfolio-specific: ensure divider fully spans once section enters
+      if (portfolioDivider) {
+        gsap.set(portfolioDivider, {
+          clipPath: "inset(0px 0px 0px 0px)"
+        });
+      } // Set initial state
+
+
+      window.log('glassContainer', "[GLASS CONTENT] Setting initial state with y: 12 for ".concat(section.id));
       gsap.set(elements, {
         opacity: 0,
         y: 12,
         // 📌 FASTER: Reduced to 12 for snappy responsiveness
-        scale: 0.97
+        scale: entryScale
       }); // Animate in
 
-      console.log("[GLASS CONTENT] Animating to y: 0 for ".concat(section.id));
+      window.log('glassContainer', "[GLASS CONTENT] Animating to y: 0 for ".concat(section.id));
       gsap.to(elements, {
         opacity: 1,
         y: 0,
@@ -274,15 +327,26 @@
               transition: "" // Restore Portfolio image transitions
 
             });
-            console.log("[GLASS CONTENT] Restored CSS transitions on ".concat(portfolioImageElements.length, " Portfolio image elements for ").concat(section.id));
+            window.log('glassContainer', "[GLASS CONTENT] Restored CSS transitions on ".concat(portfolioImageElements.length, " Portfolio image elements for ").concat(section.id));
           }
 
-          console.log("[GLASS CONTENT] ".concat(section.id, " entry animation completed, CSS transitions restored"));
+          window.log('glassContainer', "[GLASS CONTENT] ".concat(section.id, " entry animation completed, CSS transitions restored"));
         }
       });
     } else {
       // 🚨 FIX: EXIT ANIMATION - Reset elements to initial hidden state
-      console.log("[GLASS CONTENT] Exiting ".concat(section.id, " - resetting to initial state")); // 🚨 FIX: Disable CSS transitions on elements to prevent conflicts
+      window.log('glassContainer', "[GLASS CONTENT] Exiting ".concat(section.id, " - resetting to initial state")); // Portfolio-specific: clip divider during glass shrink (700 -> default height),
+      // so it never appears outside the glass container border.
+
+      if (portfolioDivider) {
+        gsap.to(portfolioDivider, {
+          clipPath: "inset(25px 0px 25px 0px)",
+          duration: 0.4,
+          ease: "power2.in",
+          overwrite: true
+        });
+      } // 🚨 FIX: Disable CSS transitions on elements to prevent conflicts
+
 
       gsap.set(elements, {
         transition: "none" // Override any CSS transitions that cause conflicts
@@ -292,8 +356,8 @@
         opacity: 0,
         y: 12,
         // 📌 FASTER: Reduced to 12 for snappy responsiveness
-        scale: 0.97,
-        // 📌 FASTER: Less dramatic scale change
+        scale: exitScale,
+        // Keep portfolio at scale 1 to avoid border/image snap artifacts
         duration: 0.4,
         // 📌 FASTER: Reduced duration for responsiveness
         ease: "power2.in",
@@ -302,7 +366,7 @@
         force3D: true,
         overwrite: true,
         onStart: function onStart() {
-          return console.log("[GLASS CONTENT] Starting ".concat(section.id, " content exit animation - moving DOWN"));
+          return window.log('glassContainer', "[GLASS CONTENT] Starting ".concat(section.id, " content exit animation - moving DOWN"));
         },
         onComplete: function onComplete() {
           // 📌 CRITICAL: Ensure elements stay in hidden state
@@ -310,7 +374,7 @@
             opacity: 0,
             y: 12,
             // Reset to entry position - reduced for responsiveness
-            scale: 0.97,
+            scale: exitScale,
             transition: "" // Restore CSS transitions for other interactions
 
           }); // 🚨 PORTFOLIO FIX: Also restore CSS transitions on Portfolio elements after exit
@@ -320,10 +384,10 @@
               transition: "" // Restore Portfolio image transitions
 
             });
-            console.log("[GLASS CONTENT] Restored CSS transitions on ".concat(portfolioImageElements.length, " Portfolio image elements after ").concat(section.id, " exit"));
+            window.log('glassContainer', "[GLASS CONTENT] Restored CSS transitions on ".concat(portfolioImageElements.length, " Portfolio image elements after ").concat(section.id, " exit"));
           }
 
-          console.log("[GLASS CONTENT] ".concat(section.id, " elements reset to initial state"));
+          window.log('glassContainer', "[GLASS CONTENT] ".concat(section.id, " elements reset to initial state"));
         }
       });
     }
@@ -360,8 +424,8 @@
       });
 
       if (window.CONFIG.debug) {
-        console.log('[HEADER] EXTREMELY aggressive header cleanup completed');
-        console.log('[HEADER] Remaining children:', titleContainer.children.length);
+        window.log('headerAnimation', '[HEADER] EXTREMELY aggressive header cleanup completed');
+        window.log('headerAnimation', '[HEADER] Remaining children:', titleContainer.children.length);
       }
     } // DON'T reset arrow here - let addHeaderTitle handle arrow animations properly
 
@@ -376,7 +440,7 @@
     clearAllHeaderTitles();
 
     if (window.CONFIG.debug) {
-      console.log("[HEADER] Header transition: ".concat(prevIndex, " \u2192 ").concat(currentIndex));
+      window.log('headerAnimation', "[HEADER] Header transition: ".concat(prevIndex, " \u2192 ").concat(currentIndex));
     }
   }
   /**
@@ -391,7 +455,7 @@
 
     if (document.body.classList.contains('banner-active') || sectionIndex === 0) {
       if (window.CONFIG.debug) {
-        console.log('[HEADER] Skipping header addition - banner is active');
+        window.log('headerAnimation', '[HEADER] Skipping header addition - banner is active');
       } // Just handle arrow for banner
 
 
@@ -411,7 +475,7 @@
 
     if (existingTitles.length > 0) {
       if (window.CONFIG.debug) {
-        console.log('[HEADER] WARNING: Found existing titles during add, clearing first');
+        window.log('headerAnimation', '[HEADER] WARNING: Found existing titles during add, clearing first');
       }
 
       clearAllHeaderTitles();
@@ -457,7 +521,7 @@
         });
 
         if (window.CONFIG.debug) {
-          console.log("[HEADER] Added header: \"".concat(newTitle.textContent, "\""));
+          window.log('headerAnimation', "[HEADER] Added header: \"".concat(newTitle.textContent, "\""));
         }
       }
     } else {
@@ -516,7 +580,7 @@
         window.currentSection === 0; // Banner section
 
         if (isCorrectSection) {
-          console.log("[SCROLL BUTTON] Delayed appearance triggered - still on correct section"); // Force scroll button to be visible
+          window.log('scrollButtons', "[SCROLL BUTTON] Delayed appearance triggered - still on correct section"); // Force scroll button to be visible
 
           gsap.set(button, {
             opacity: 1,
@@ -524,9 +588,9 @@
           });
           button.style.opacity = "1";
           button.style.visibility = "visible";
-          console.log("[SCROLL BUTTON] FORCED scroll button visible");
+          window.log('scrollButtons', "[SCROLL BUTTON] FORCED scroll button visible");
         } else {
-          console.log("[SCROLL BUTTON] Delayed appearance cancelled - no longer on correct section"); // Ensure button stays hidden
+          window.log('scrollButtons', "[SCROLL BUTTON] Delayed appearance cancelled - no longer on correct section"); // Ensure button stays hidden
 
           gsap.set(button, {
             opacity: 0,
@@ -544,11 +608,11 @@
 
 
   function updateScrollButtons() {
-    console.log('[SCROLL BUTTONS] updateScrollButtons called for section:', window.currentSection);
+    window.log('scrollButtons', '[SCROLL BUTTONS] updateScrollButtons called for section:', window.currentSection);
     var $q = window.Portfolio.dom.$q;
     var scrollUpBtn = $q(".scroll-up");
     var scrollDownBtn = $q(".scroll-down");
-    console.log('[SCROLL BUTTONS] Elements found - up:', !!scrollUpBtn, 'down:', !!scrollDownBtn);
+    window.log('scrollButtons', '[SCROLL BUTTONS] Elements found - up:', !!scrollUpBtn, 'down:', !!scrollDownBtn);
 
     if (!scrollUpBtn || !scrollDownBtn) {
       console.error('[SCROLL BUTTONS] ERROR: Elements not found!');
@@ -568,7 +632,7 @@
 
 
     if (window.currentSection === 0) {
-      console.log('[SCROLL BUTTONS] Banner section - hiding up, showing down with delay'); // Hide scroll-up button
+      window.log('scrollButtons', '[SCROLL BUTTONS] Banner section - hiding up, showing down with delay'); // Hide scroll-up button
 
       gsap.set(scrollUpBtn, {
         opacity: 0,
@@ -578,7 +642,7 @@
       animateDelayedScrollButtonAppearance(scrollDownBtn);
     } // On form (last section): only show scroll up
     else if (window.currentSection === window.sectionCount - 1) {
-        console.log('[SCROLL BUTTONS] Form section - showing up, hiding down'); // Hide scroll-down button
+        window.log('scrollButtons', '[SCROLL BUTTONS] Form section - showing up, hiding down'); // Hide scroll-down button
 
         gsap.set(scrollDownBtn, {
           opacity: 0,
@@ -588,13 +652,13 @@
         animateDelayedScrollButtonAppearance(scrollUpBtn, true);
       } // Middle sections (About, Services, Portfolio): hide both scroll buttons
       else {
-          console.log('[SCROLL BUTTONS] Middle section (About/Services/Portfolio) - hiding both scroll buttons'); // Hide both scroll buttons (navigation dots are handled separately and stay visible)
+          window.log('scrollButtons', '[SCROLL BUTTONS] Middle section (About/Services/Portfolio) - hiding both scroll buttons'); // Hide both scroll buttons (navigation dots are handled separately and stay visible)
 
           gsap.set([scrollUpBtn, scrollDownBtn], {
             opacity: 0,
             visibility: "hidden"
           });
-          console.log('[SCROLL BUTTONS] Both scroll buttons hidden - navigation dots stay visible');
+          window.log('scrollButtons', '[SCROLL BUTTONS] Both scroll buttons hidden - navigation dots stay visible');
         }
   }
   /**
@@ -603,20 +667,20 @@
 
 
   function showNavigationElements() {
-    console.log('[NAVIGATION DOTS] showNavigationElements called');
+    window.log('navigationDots', '[NAVIGATION DOTS] showNavigationElements called');
     var sectionDots = document.querySelector('.section-dots');
-    console.log('[NAVIGATION DOTS] Found .section-dots element:', !!sectionDots);
+    window.log('navigationDots', '[NAVIGATION DOTS] Found .section-dots element:', !!sectionDots);
 
     if (sectionDots) {
-      console.log('[NAVIGATION DOTS] Navigation dots should now be visible by default (CSS updated)'); // Verify they're visible and log their state
+      window.log('navigationDots', '[NAVIGATION DOTS] Navigation dots should now be visible by default (CSS updated)'); // Verify they're visible and log their state
 
       var computedStyle = window.getComputedStyle(sectionDots);
-      console.log('[NAVIGATION DOTS] Current computed opacity:', computedStyle.opacity);
-      console.log('[NAVIGATION DOTS] Current computed visibility:', computedStyle.visibility);
-      console.log('[NAVIGATION DOTS] Current computed display:', computedStyle.display); // Count dots to verify they were created
+      window.log('navigationDots', '[NAVIGATION DOTS] Current computed opacity:', computedStyle.opacity);
+      window.log('navigationDots', '[NAVIGATION DOTS] Current computed visibility:', computedStyle.visibility);
+      window.log('navigationDots', '[NAVIGATION DOTS] Current computed display:', computedStyle.display); // Count dots to verify they were created
 
       var dots = sectionDots.querySelectorAll('.section-dot');
-      console.log('[NAVIGATION DOTS] Number of dots found:', dots.length);
+      window.log('navigationDots', '[NAVIGATION DOTS] Number of dots found:', dots.length);
     } else {
       console.error('[NAVIGATION DOTS] ERROR: .section-dots element not found in DOM!');
     }
@@ -624,7 +688,152 @@
     if (window.CONFIG.debug) {
       console.log('[UI] Navigation elements checked after initialization');
     }
-  } // Expose UI functions
+  } // ============================================================================
+  // 🆕 SCROLL TOAST MESSAGE SYSTEM
+  // ============================================================================
+  // Displays notification when user attempts rapid scrolling
+  // Configurable via CONFIG.scrollMessage
+  // ============================================================================
+
+
+  var scrollToastState = {
+    lastShownTime: 0,
+    isShowing: false,
+    hideTimeout: null
+  };
+  /**
+   * Initialize scroll toast notification element
+   * Sets up content from CONFIG
+   */
+
+  function initializeScrollToast() {
+    // 🔧 FIX: Remove optional chaining for Babel compatibility
+    var config = window.CONFIG && window.CONFIG.scrollMessage;
+
+    if (!config || !config.enabled) {
+      console.log('[SCROLL TOAST] Feature disabled in CONFIG');
+      return;
+    }
+
+    var toastElement = document.getElementById('scroll-toast');
+
+    if (!toastElement) {
+      console.error('[SCROLL TOAST] Element #scroll-toast not found in HTML');
+      return;
+    } // Set icon and text from CONFIG
+
+
+    var iconSpan = toastElement.querySelector('.scroll-toast-icon');
+    var textSpan = toastElement.querySelector('.scroll-toast-text');
+
+    if (iconSpan && config.icon) {
+      iconSpan.textContent = config.icon;
+    } else if (iconSpan) {
+      iconSpan.style.display = 'none'; // Hide if no icon
+    }
+
+    if (textSpan) {
+      textSpan.textContent = config.message;
+    }
+
+    console.log('[SCROLL TOAST] Initialized with message:', config.message);
+  }
+  /**
+   * Show scroll toast notification
+   * Handles cooldown, slide-in animation, and auto-dismiss
+   */
+
+
+  function showScrollToast() {
+    // 🔧 FIX: Remove optional chaining for Babel compatibility
+    var config = window.CONFIG && window.CONFIG.scrollMessage; // Check if feature is enabled
+
+    if (!config || !config.enabled) {
+      return;
+    } // Check if already showing
+
+
+    if (scrollToastState.isShowing) {
+      console.log('[SCROLL TOAST] Already showing - ignoring');
+      return;
+    } // Check cooldown
+
+
+    var now = Date.now();
+    var timeSinceLastShown = now - scrollToastState.lastShownTime;
+
+    if (timeSinceLastShown < config.cooldown) {
+      var remainingCooldown = Math.ceil((config.cooldown - timeSinceLastShown) / 1000);
+      console.log("[SCROLL TOAST] In cooldown - ".concat(remainingCooldown, "s remaining"));
+      return;
+    }
+
+    var toastElement = document.getElementById('scroll-toast');
+
+    if (!toastElement) {
+      console.error('[SCROLL TOAST] Element not found');
+      return;
+    }
+
+    console.log('[SCROLL TOAST] Showing message:', config.message); // Mark as showing
+
+    scrollToastState.isShowing = true;
+    scrollToastState.lastShownTime = now; // Clear any existing hide timeout
+
+    if (scrollToastState.hideTimeout) {
+      clearTimeout(scrollToastState.hideTimeout);
+      scrollToastState.hideTimeout = null;
+    } // Kill any existing animations
+
+
+    gsap.killTweensOf(toastElement); // Slide in from right
+
+    gsap.to(toastElement, {
+      x: 0,
+      duration: config.animationDuration,
+      ease: config.ease,
+      onComplete: function onComplete() {
+        console.log('[SCROLL TOAST] Slide-in complete'); // Auto-dismiss after duration
+
+        scrollToastState.hideTimeout = setTimeout(function () {
+          hideScrollToast();
+        }, config.duration);
+      }
+    });
+  }
+  /**
+   * Hide scroll toast notification
+   * Slides back out to the right
+   */
+
+
+  function hideScrollToast() {
+    // 🔧 FIX: Remove optional chaining for Babel compatibility
+    var config = window.CONFIG && window.CONFIG.scrollMessage;
+    if (!config) return;
+    var toastElement = document.getElementById('scroll-toast');
+    if (!toastElement) return;
+    console.log('[SCROLL TOAST] Hiding message'); // Clear timeout
+
+    if (scrollToastState.hideTimeout) {
+      clearTimeout(scrollToastState.hideTimeout);
+      scrollToastState.hideTimeout = null;
+    } // Kill any existing animations
+
+
+    gsap.killTweensOf(toastElement); // Slide out to right
+
+    gsap.to(toastElement, {
+      x: config.slideDistance,
+      duration: config.animationDuration,
+      ease: config.ease,
+      onComplete: function onComplete() {
+        scrollToastState.isShowing = false;
+        console.log('[SCROLL TOAST] Slide-out complete');
+      }
+    });
+  } // ============================================================================
+  // Expose UI functions
 
 
   window.Portfolio.ui = {
@@ -637,7 +846,10 @@
     updateScrollButtons: updateScrollButtons,
     animateDelayedScrollButtonAppearance: animateDelayedScrollButtonAppearance,
     animateGlassContent: animateGlassContent,
-    showNavigationElements: showNavigationElements
+    showNavigationElements: showNavigationElements,
+    initializeScrollToast: initializeScrollToast,
+    showScrollToast: showScrollToast,
+    hideScrollToast: hideScrollToast
   };
 
   if (window.Portfolio.debug) {

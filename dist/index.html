@@ -11,47 +11,24 @@
         <link rel="icon" type="image/png" sizes="16x16" href="img/favicon/favicon-16x16.png">
         <link rel="icon" type="image/png" sizes="32x32" href="img/favicon/favicon-32x32.png">
         <link rel="apple-touch-icon" sizes="180x180" href="img/favicon/apple-touch-icon.png">
-        <link rel="manifest" href="img/favicon/site.webmanifest">
         <meta name="theme-color" content="#ffffff">
         
         <!-- My stylesheet -->
         <link rel='stylesheet' href='style.css'>   
-        <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 
         <!-- Font Awesome for icons -->
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
 
-        <!-- Splitting.js CSS -->
-        <link rel="stylesheet" href="https://unpkg.com/splitting/dist/splitting.css" />
-
         <!-- Swiper's stylesheet 
         <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@8/swiper-bundle.min.css"/> 
         -->
-        
-        <!-- LiveServer reload fix script - run before anything else -->
-        <script>
-            // Clear any reload flags that might be causing issues
-            try {
-                sessionStorage.removeItem('isReloading');
-                console.log("🛠️ Anti-reload loop protection active");
-            } catch (e) {
-                console.error("Failed to clear sessionStorage:", e);
-            }
-            
-            // Create global helper
-            window.fixReload = function() {
-                console.log("🔄 Applying reload fix...");
-                sessionStorage.clear();
-                return "Session storage cleared - try refreshing now";
-            };
-        </script>
     </head>
 <body> 
 <!-- Preloader -->
 <div id="preloader"></div>
 
-<video autoplay muted loop id="bg-video">
-    <source src="4K.mp4" type="video/mp4"> 
+<video autoplay muted loop playsinline id="bg-video" preload="metadata">
+    <source src="4K.mp4" type="video/mp4">
     Your browser does not support HTML5 video.
 </video> 
 <div class="overlay"></div>
@@ -134,7 +111,7 @@
                     <p>
                         I transform your vision into seamless, <span class="highlight-word">responsive websites </span>with <span class="highlight-word">clean code</span> and professional WordPress integration.<br> </span>
                     </p>
-                    <p>Let's build something <span class="highlight-word">yours</span>.
+                    <p><a href="#form" class="cta-link">Let's build something <span class="highlight-word glow-word">yours</span>.</a>
                     </p>
                 </div>
             </div>
@@ -159,16 +136,10 @@
         </div>
     </section>
 
-    <!-- ============================================================
-         SERVICES SECTION - Updated Services Layout – 2025 Version
-         ============================================================
-         Modern grouped accordion design with glassmorphism and GSAP animations.
-         Replaces old flip-card system (backup preserved below).
-         ============================================================ -->
     <section id="services" class="section"> 
         <div class="services-wrapper page-limit">
             <div class="headline">
-                <h1>What I Do</h1>
+                <h1>Services</h1>
             </div>
             
             <!-- Service Categories Grid - 3 Main Groups -->
@@ -205,7 +176,7 @@
                                 </div>
                             </li>
                         </ul>
-                        <a href="#form" class="category-cta">Start Your Project →</a>
+                        <a href="#form" class="category-cta">Start Your Project</a>
                     </div>
                 </article>
 
@@ -240,7 +211,7 @@
                                 </div>
                             </li>
                         </ul>
-                        <a href="#form" class="category-cta">Discuss Integration →</a>
+                        <a href="#form" class="category-cta">Discuss Integration</a>
                     </div>
                 </article>
 
@@ -275,72 +246,126 @@
                                 </div>
                             </li>
                         </ul>
-                        <a href="#form" class="category-cta">Optimize Your Site →</a>
+                        <a href="#form" class="category-cta">Optimize Your Site</a>
                     </div>
                 </article>
 
-            </div>
-        </div>
-    </section>
+                
 
-    <!-- ============================================================
-         BACKUP: OLD FLIP-CARD SYSTEM (2024)
-         ============================================================
-         Preserved for easy rollback if needed.
-         To restore: uncomment this section and remove new layout above.
-         ============================================================
-    
-    <section id="services" class="section"> 
-        <div class="services-wrapper page-limit">
-            <div class="headline">
-                <h1>Services</h1>
-            </div>
-            
-            <div class="flip-cards-container">
-                [... old flip-card markup preserved in comments ...]
             </div>
         </div>
     </section>
-    ============================================================ -->
 
     <section id="portfolio" class="section">
         <div class="portfolio-wrapper page-limit">
-            <div class="left-portfolio">
-                <div class="headline">
-                    <h1>Portfolio</h1>
-                </div>
-                <div class="text-portfolio page-limit">
-                    <p><strong>Layout Implementation:</strong> Website coding based on .PSD files with pixel-perfect accuracy</p>
-                    <p><strong>WordPress Theme:</strong> Custom theme created from scratch based on graphic design</p>
-                    <p><strong>SEO & Performance:</strong> Optimization of functionality, page loading and search engine visibility</p>
-                    <p><strong>Responsiveness:</strong> Adaptation to mobile devices and different screen resolutions</p>
-                    <p><strong>Payment Integration:</strong> Transaction system integration for online sales</p>
-                    <p><strong>UX/UI Design:</strong> Implementation following usability principles and user expectations</p>
-                    <p><strong>Client Training:</strong> WordPress and WooCommerce management instruction for clients</p>
-                </div>
+            <div class="headline">
+                <h1>Portfolio</h1>
             </div>
-            <div class="right-portfolio">
-                <div class="portfolio-image-wrapper">
-                    <a href="https://lachowskaaleksandra.pl" target="_blank" rel="noopener noreferrer"><img src="img/Ola.jpg"></a>
+            <!-- Portfolio content - work in progress -->
+            <div class="portfolio-content">
+                <div class="left">
+                    <h1>Aleksandra Lachowska</h1>
+                    <h3>Dietitian Website — Design-to-Code Implementation & WordPress Engineering</h3>
+                    <p>
+                        Implemented a pre-designed UI into a fully functional custom WordPress build, focusing on performance, responsiveness, and maintainable architecture. <br>Delivered a production-ready website with optimized <br>structure, clean code, and scalable <br>content management.
+                    </p>
+                    <div id="mockup">
+                        <img src="img/MockUpFinalwebp.webp" alt="Aleksandra Lachowska Website Mockup">
+                    </div>
                 </div>
-            </div>
+                <div class="portfolio-divider" aria-hidden="true"></div>
+                <div class="right">
+                    <section class="portfolio-block">
+                        <h4>Overview</h4>
+                        <p>
+                            Implemented a pre-designed UI into a custom WordPress build, ensuring performance, responsiveness, and clean architecture.
+                        </p>
+                    </section>
+                
+                    <section class="portfolio-block">
+                        <h4>My Role</h4>
+                        <ul>
+                            <li>WordPress Developer</li>
+                            <li>Frontend Implementation</li>
+                            <li>Technical SEO & Performance Optimization</li>
+                        </ul>
+                    </section>
+                
+                    <section class="portfolio-block">
+                        <h4>Tech Stack</h4>
+                        <ul class="tech-stack">
+                            <li>WordPress (Custom Theme Development)</li>
+                            <li>Custom Content Architecture</li>
+                            <li>JavaScript (AJAX, GSAP Animations)</li>
+                            <li>ACF & Flexible Content</li>
+                        </ul>
+                    </section>
+
+                    <section class="portfolio-block">
+                        <h4>Key Contributions</h4>
+                        <ul class="key-wins">
+                            <li>
+                                <strong>Frontend Implementation</strong>
+                                <span>Pixel-perfect build from provided design</span>
+                            </li>
+                            <li>
+                                <strong>Wordpress Integration</strong>
+                                <span>Custom theme architecture & CMS integration</span>
+                            </li>
+                            <li>
+                                <strong>Dynamic Content Setup</strong>
+                                <span>Flexible layouts & reusable content sections</span>
+                            </li>
+                            <li>
+                                <strong>Performance Optimization</strong>
+                                <span>Clean code, asset optimization & responsiveness</span>
+                            </li>
+                        </ul>
+                    </section>
+                
+                    <div class="portfolio-next">
+                        <a href="https://lachowskaaleksandra.pl" target="_blank" class="btn">
+                            View Project
+                        </a>
+                    </div>
+                </div>
         </div>
-    </section> 
+    </section>
 
     <section id="form" class="section">
         <div class="wrapper page-limit">
             <div class="form-wrapper">
-                <form action="https://formspree.io/f/meqydzll" method="POST">
-                    <input type="text" name="name" placeholder="Name">
-                    <input type="email" name="_replyto" placeholder="Email">
-                    <textarea name="message" placeholder="Message"></textarea>
-                    <button type="submit" class="btn">SEND</button>  
-                </form>
+                <!-- LEFT SIDE: Form with gradient border -->
+                <div class="form-left">
+                    <div class="form-container">
+                        <form action="https://formspree.io/f/meqydzll" method="POST">
+                            <div class="input-wrapper">
+                                <i class="fa fa-user input-icon"></i>
+                                <input type="text" name="name" placeholder="Your Name" autocomplete="name">
+                            </div>
+                            <div class="input-wrapper">
+                                <i class="fa fa-envelope input-icon"></i>
+                                <input type="email" name="_replyto" placeholder="Your Email" autocomplete="email">
+                            </div>
+                            <div class="input-wrapper">
+                                <i class="fa fa-comment input-icon"></i>
+                                <textarea name="message" placeholder="Message" autocomplete="off"></textarea>
+                            </div>
+                            <div class="button-wrapper">
+                                <button type="submit" class="btn">SEND</button>
+                                <span class="button-subtext">I'll get back to you within 24 hours</span>
+                            </div>
+                        </form>
+                    </div>
+                </div>
                 
-                <div class="form-details">
-                    <h2>Let’s collaborate!</h2>
-                    <h3>Have a project in mind or a question?</h3>
-                    <h2>Feel free to reach me!</h2>                    
+                <!-- RIGHT SIDE: Let's Work Together -->
+                <div class="form-right">
+                    <h2 class="form-main-heading">Let's Work Together</h2>
+                    <p class="form-description">
+                        <i class="fa fa-comment-o"></i> Have a project in mind or any questions?<br>
+                        <i class="fa fa-hand-o-right"></i> I'm here to help. Feel free to reach out!
+                    </p>
                 </div>
             </div> 
         </div>
@@ -358,6 +383,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/Observer.min.js"></script>
 
 <!-- Scripts at the end of body -->
+<script src="js/i18n.js"></script>
 <script src="js/script.js"></script>
 
 <!-- Persistent UI Elements -->
@@ -375,13 +401,18 @@
     <a href="#banner" class="scroll-btn"><img src="img/scroll-btn.png"></a>  
     <a href="#banner" class="scroll-btn-arrow"><img src="img/scroll-btn-arrow.png"></a> 
 </div>
+<button id="language-toggle" class="language-toggle" type="button" aria-label="Switch language">
+    <span class="language-toggle-label">PL</span>
+</button>
 
 <!-- Section Dot Navigation -->
 <div class="section-dots"></div>
 
-<!-- Splitting.js JS -->
-<script src="https://unpkg.com/splitting/dist/splitting.min.js"></script>
-<script src="https://unpkg.com/split-type"></script>
+<!-- Scroll Toast Notification (Desktop Only) -->
+<div id="scroll-toast" class="scroll-toast">
+  <span class="scroll-toast-icon"></span>
+  <span class="scroll-toast-text"></span>
+</div>
 
 </body> 
 </html>       

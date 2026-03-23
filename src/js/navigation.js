@@ -12,25 +12,28 @@
    * Setup navigation dots
    */
   function setupNavigation(sections, currentSection, goToSection, CONFIG) {
-    console.log('[NAVIGATION SETUP] setupNavigation called with', sections.length, 'sections');
+    window.log('navigationSetup', '[NAVIGATION SETUP] setupNavigation called with', sections.length, 'sections');
     
     const dotsContainer = document.querySelector('.section-dots');
-    console.log('[NAVIGATION SETUP] Found .section-dots container:', !!dotsContainer);
+    window.log('navigationSetup', '[NAVIGATION SETUP] Found .section-dots container:', !!dotsContainer);
     
     if (!dotsContainer) {
       console.error('[NAVIGATION SETUP] ERROR: .section-dots container not found in DOM!');
       return;
     }
     
+    const servicesIndex = sections.findIndex(s => s && s.id === 'services');
+    window.Portfolio.servicesSectionIndex = servicesIndex >= 0 ? servicesIndex : -1;
+    
     // Set configurable position
     document.documentElement.style.setProperty('--dot-nav-right-position', `${CONFIG.navigation.dotPosition}px`); 
     
     // Clear existing dots
     dotsContainer.innerHTML = '';
-    console.log('[NAVIGATION SETUP] Cleared existing dots');
+    window.log('navigationSetup', '[NAVIGATION SETUP] Cleared existing dots');
      
     // Create dots for each section
-    console.log('[NAVIGATION SETUP] Creating dots for', sections.length, 'sections');
+    window.log('navigationSetup', '[NAVIGATION SETUP] Creating dots for', sections.length, 'sections');
     sections.forEach((section, index) => {
       if (!section) return;
       
@@ -60,10 +63,10 @@
       });
       
       dotsContainer.appendChild(dotContainer);
-      console.log('[NAVIGATION SETUP] Created dot', index, 'for section', section.id);
+      window.log('navigationSetup', '[NAVIGATION SETUP] Created dot', index, 'for section', section.id);
     });
     
-    console.log('[NAVIGATION SETUP] Created', dotsContainer.children.length, 'total dots');
+    window.log('navigationSetup', '[NAVIGATION SETUP] Created', dotsContainer.children.length, 'total dots');
     
     // Add anchor navigation
     document.querySelectorAll('a[href^="#"]').forEach(anchor => {
@@ -81,6 +84,82 @@
     
     // Set initial dot state immediately
     updateNavigation(currentSection, true, CONFIG);
+    
+    // Plan B (mobile only): Throttle resize to avoid layout thrash (150ms)
+    let resizeRaf = null;
+    let resizeTimeout = null;
+    const RESIZE_THROTTLE_MS = 150;
+    const mobileMatch = window.matchMedia && window.matchMedia('(max-width: 768px)');
+    window.addEventListener('resize', () => {
+      if (mobileMatch && !mobileMatch.matches) {
+        if (resizeRaf) cancelAnimationFrame(resizeRaf);
+        resizeRaf = null;
+        if (resizeTimeout) clearTimeout(resizeTimeout);
+        resizeTimeout = null;
+        resizeRaf = requestAnimationFrame(() => {
+          resizeRaf = null;
+          if (window.Portfolio.resetDesktopLayout) window.Portfolio.resetDesktopLayout();
+          const activeIndex = typeof window.currentSection === 'number' ? window.currentSection : -1;
+          if (activeIndex === window.Portfolio.servicesSectionIndex) {
+            alignSectionDotsWithServices(activeIndex);
+          }
+        });
+        return;
+      }
+      if (!mobileMatch || !mobileMatch.matches) return;
+      if (resizeTimeout) return;
+      if (resizeRaf) cancelAnimationFrame(resizeRaf);
+      resizeRaf = requestAnimationFrame(() => {
+        resizeRaf = null;
+        resizeTimeout = setTimeout(() => {
+          resizeTimeout = null;
+          const activeIndex = typeof window.currentSection === 'number' ? window.currentSection : -1;
+          if (activeIndex === window.Portfolio.servicesSectionIndex) {
+            alignSectionDotsWithServices(activeIndex);
+          }
+        }, RESIZE_THROTTLE_MS);
+      });
+    });
+  }
+  
+  /**
+   * Align section-dots so the middle dot (Services) lines up with the "+" of the middle service card.
+   * Sets --section-dots-y-offset on :root when on Services section; clears it otherwise.
+   * Runs measure after layout (double rAF + short delay) so section is in final position.
+   */
+  function alignSectionDotsWithServices(targetIndex) {
+    const servicesIndex = window.Portfolio.servicesSectionIndex;
+    const root = document.documentElement;
+    
+    if (servicesIndex < 0 || targetIndex !== servicesIndex) {
+      root.style.setProperty('--section-dots-y-offset', '0px');
+      return;
+    }
+    
+    function measureAndApply() {
+      const middleHeader = document.querySelector('#services .service-categories-grid .service-category:nth-child(2) .category-header');
+      const dotsContainer = document.querySelector('.section-dots');
+      const middleDotContainer = dotsContainer && dotsContainer.children[servicesIndex];
+      const middleDot = middleDotContainer && middleDotContainer.querySelector('.section-dot');
+      
+      if (!middleHeader || !middleDot) {
+        root.style.setProperty('--section-dots-y-offset', '0px');
+        return;
+      }
+      const hr = middleHeader.getBoundingClientRect();
+      const dr = middleDot.getBoundingClientRect();
+      const headerCenterY = hr.top + hr.height / 2;
+      const dotCenterY = dr.top + dr.height / 2;
+      const offsetPx = headerCenterY - dotCenterY;
+      root.style.setProperty('--section-dots-y-offset', `${offsetPx}px`);
+    }
+    
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        measureAndApply();
+        setTimeout(measureAndApply, 350);
+      });
+    });
   }
   
   /**
@@ -135,7 +214,12 @@
     // Use global CONFIG as fallback if not provided
     const config = CONFIG || window.CONFIG;
     
-    console.log(`[NAV DOTS #${transactionId}] Immediate state update to section ${targetIndex}`);
+    window.log('navigationDots', `[NAV DOTS #${transactionId}] Immediate state update to section ${targetIndex}`);
+    
+    const servicesIndex = window.Portfolio.servicesSectionIndex;
+    if (targetIndex !== servicesIndex) {
+      document.documentElement.style.setProperty('--section-dots-y-offset', '0px');
+    }
     
     // 🚀 PRIORITY 3: Update state IMMEDIATELY (synchronous)
     dots.forEach((dot, index) => {
@@ -148,10 +232,13 @@
     
     // 🚀 Async visual transition (non-blocking)
     requestAnimationFrame(() => {
-      // 🚀 Validate transaction before animating
+      if (targetIndex === servicesIndex) {
+        alignSectionDotsWithServices(targetIndex);
+      }
+      // Validate transaction before animating
       if (transactionId && window.Portfolio.scroll && 
           transactionId !== window.Portfolio.scroll.getCurrentTransactionId()) {
-        console.log(`[NAV DOTS #${transactionId}] Visual animation cancelled - transaction invalidated`);
+        window.log('navigationDots', `[NAV DOTS #${transactionId}] Visual animation cancelled - transaction invalidated`);
         return;
       }
       
@@ -177,7 +264,7 @@
         });
       }
       
-      console.log(`[NAV DOTS #${transactionId}] Visual animation completed`);
+      window.log('navigationDots', `[NAV DOTS #${transactionId}] Visual animation completed`);
     });
   }
   
@@ -212,6 +299,6 @@
   };
   
   if (window.Portfolio.debug) {
-    console.log('[NAVIGATION] Module loaded successfully with Priority 3 immediate updates');
+    window.log('initialization', '[NAVIGATION] Module loaded successfully with Priority 3 immediate updates');
   }
 })(); 

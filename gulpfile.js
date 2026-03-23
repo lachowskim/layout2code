@@ -43,6 +43,11 @@ function jsTask() {
         .pipe(dest('dist/js'));
 }
 
+function i18nTask() {
+    return src('src/js/i18n.js')
+        .pipe(dest('dist/js'));
+}
+
 //nunjucks
 function nunjucksTask() {
     return src('src/pages/*.html')
@@ -56,8 +61,11 @@ function nunjucksTask() {
 function watchTask() {
     watch('src/scss/**/*.scss', scssTask);
     watch('src/js/*.js', jsTask);  // Watch all JS files for changes
+    watch('src/js/i18n.js', i18nTask);
     watch(['src/pages/*.html', 'src/templates/*.html'], nunjucksTask);
 }
 
 //default gulp
-exports.default = series(parallel(nunjucksTask, scssTask, jsTask), watchTask);
+const build = parallel(nunjucksTask, scssTask, jsTask, i18nTask);
+exports.build = build;
+exports.default = series(build, watchTask);

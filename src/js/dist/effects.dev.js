@@ -1,5 +1,11 @@
 "use strict";
 
+function ownKeys(object, enumerableOnly) { var keys = Object.keys(object); if (Object.getOwnPropertySymbols) { var symbols = Object.getOwnPropertySymbols(object); if (enumerableOnly) symbols = symbols.filter(function (sym) { return Object.getOwnPropertyDescriptor(object, sym).enumerable; }); keys.push.apply(keys, symbols); } return keys; }
+
+function _objectSpread(target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i] != null ? arguments[i] : {}; if (i % 2) { ownKeys(source, true).forEach(function (key) { _defineProperty(target, key, source[key]); }); } else if (Object.getOwnPropertyDescriptors) { Object.defineProperties(target, Object.getOwnPropertyDescriptors(source)); } else { ownKeys(source).forEach(function (key) { Object.defineProperty(target, key, Object.getOwnPropertyDescriptor(source, key)); }); } } return target; }
+
+function _defineProperty(obj, key, value) { if (key in obj) { Object.defineProperty(obj, key, { value: value, enumerable: true, configurable: true, writable: true }); } else { obj[key] = value; } return obj; }
+
 /**
  * Effects Module
  * Handles button hover effects, text animations, scroll button hover effects, and mobile menu
@@ -10,10 +16,11 @@
   window.Portfolio = window.Portfolio || {};
   /**
    * Setup button hover effects
+   * Applies radial cursor-based hover effect to .btn and .category-cta elements
    */
 
   function setupButtonEffects() {
-    document.querySelectorAll('.btn').forEach(function (button) {
+    document.querySelectorAll('.btn, .category-cta').forEach(function (button) {
       button.addEventListener('mouseenter', function (e) {
         button.classList.remove('radial-hover');
         var rect = button.getBoundingClientRect();
@@ -36,34 +43,6 @@
     });
   }
   /**
-   * Setup mobile menu
-   */
-
-
-  function setupMobileMenu() {
-    var burgerIcon = document.getElementById('burgerIcon');
-    var menu = document.querySelector('.menu-wrapper ul.menu');
-    var menuOverlay = document.getElementById('menuOverlay');
-    if (!burgerIcon || !menu || !menuOverlay) return;
-    burgerIcon.addEventListener('click', function () {
-      menu.classList.toggle('active');
-      menuOverlay.classList.toggle('active');
-      burgerIcon.classList.toggle('active');
-    });
-    menuOverlay.addEventListener('click', function () {
-      menu.classList.remove('active');
-      menuOverlay.classList.remove('active');
-      burgerIcon.classList.remove('active');
-    });
-    menu.querySelectorAll('a').forEach(function (link) {
-      link.addEventListener('click', function () {
-        menu.classList.remove('active');
-        menuOverlay.classList.remove('active');
-        burgerIcon.classList.remove('active');
-      });
-    });
-  }
-  /**
    * Setup scroll button hover effects - BULLETPROOF VERSION
    */
 
@@ -74,7 +53,7 @@
     var scrollDownArrow = document.querySelector('.scroll-down .scroll-btn-arrow');
     var scrollUpArrow = document.querySelector('.scroll-up .scroll-btn-arrow');
     if (!scrollDownBtn || !scrollUpBtn || !scrollDownArrow || !scrollUpArrow) return;
-    console.log('[SCROLL HOVER] BULLETPROOF setup starting');
+    window.log('effects', '[SCROLL HOVER] BULLETPROOF setup starting');
 
     function resetArrowStyles(arrow) {
       gsap.killTweensOf(arrow);
@@ -116,7 +95,7 @@
       var rotate = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : false;
       var timelineRef = arguments.length > 4 ? arguments[4] : undefined;
       btn.addEventListener('mouseenter', function () {
-        console.log("[".concat(rotate ? 'UP' : 'DOWN', "] ENTER"));
+        window.log('effects', "[".concat(rotate ? 'UP' : 'DOWN', "] ENTER"));
         gsap.killTweensOf(arrow);
 
         if (timelineRef.current) {
@@ -140,7 +119,7 @@
         timelineRef.current = tl;
       });
       btn.addEventListener('mouseleave', function () {
-        console.log("[".concat(rotate ? 'UP' : 'DOWN', "] LEAVE"));
+        window.log('effects', "[".concat(rotate ? 'UP' : 'DOWN', "] LEAVE"));
         gsap.killTweensOf(arrow);
 
         if (timelineRef.current) {
@@ -154,7 +133,7 @@
 
     setupHoverAnimation(scrollDownBtn, scrollDownArrow, [30, 35], false, downTimeline);
     setupHoverAnimation(scrollUpBtn, scrollUpArrow, [-30, -35], true, upTimeline);
-    console.log('[SCROLL HOVER] BULLETPROOF setup complete');
+    window.log('effects', '[SCROLL HOVER] BULLETPROOF setup complete');
   }
   /**
    * Setup service accordion interactions - Updated Services Layout – 2025 Version
@@ -163,11 +142,11 @@
 
 
   function setupServiceAccordion() {
-    console.log('[SERVICE ACCORDION] Initializing...');
+    window.log('effects', '[SERVICE ACCORDION] Initializing...');
     var categories = document.querySelectorAll('.service-category');
 
     if (!categories.length) {
-      console.log('[SERVICE ACCORDION] No categories found');
+      window.log('effects', '[SERVICE ACCORDION] No categories found');
       return;
     } // Service category messages for form pre-population
 
@@ -176,67 +155,284 @@
       'design-to-code': 'Hi! I\'m interested in your Design-to-Code implementation services. Could you please provide more details about pixel-perfect coding from Figma/Photoshop and your process?',
       'wordpress-api': 'Hi! I\'m interested in WordPress theme customization and API integration services. Could you please share more information about your development approach?',
       'frameworks-performance': 'Hi! I\'m interested in performance optimization and modern framework development. Could you please provide details about your services?'
-    };
-    categories.forEach(function (category) {
+    }; // Store accordion instances for external control
+
+    var accordionInstances = []; // 🔧 FIX: Hide all cards initially to prevent flash on section entry
+    // Use config values for initial state
+
+    var config = window.CONFIG.services;
+    categories.forEach(function (category, setupIndex) {
+      window.log('effects', "[SERVICE ACCORDION] Initial setup for accordion ".concat(setupIndex)); // Hide the container
+
+      gsap.set(category, config.containerAnimation.from); // 🔧 FIX: Also ensure content is collapsed initially
+
+      var content = category.querySelector('.category-content');
+      var header = category.querySelector('.category-header');
+      var serviceItems = content.querySelectorAll('.service-item');
+      var ctaLink = content.querySelector('.category-cta');
+      window.log('effects', "[SERVICE ACCORDION] Setup ".concat(setupIndex, " - content element:"), content);
+      window.log('effects', "[SERVICE ACCORDION] Setup ".concat(setupIndex, " - content ID:"), content ? content.id : 'null');
+
+      if (content && header) {
+        // Set ARIA to collapsed state
+        header.setAttribute('aria-expanded', 'false');
+        content.setAttribute('aria-hidden', 'true'); // Remove expanded class if present
+
+        category.classList.remove('is-expanded'); // 🔧 CRITICAL: Set initial collapsed state for accordion container
+        // Log BEFORE setting
+
+        var beforeStyle = window.getComputedStyle(content);
+        window.log('effects', "[SERVICE ACCORDION] Setup ".concat(setupIndex, " BEFORE gsap.set - maxHeight:"), beforeStyle.maxHeight);
+        gsap.set(content, {
+          maxHeight: 0,
+          padding: '0'
+        }); // Log AFTER setting
+
+        setTimeout(function () {
+          var afterStyle = window.getComputedStyle(content);
+          window.log('effects', "[SERVICE ACCORDION] Setup ".concat(setupIndex, " AFTER gsap.set - maxHeight:"), afterStyle.maxHeight, 'padding:', afterStyle.padding);
+        }, 50); // 🔧 CRITICAL: Force hide the content elements with GSAP (override CSS)
+
+        if (serviceItems.length > 0) {
+          gsap.set(serviceItems, {
+            opacity: 0,
+            y: 20
+          });
+        }
+
+        if (ctaLink) {
+          gsap.set(ctaLink, {
+            opacity: 0,
+            y: 10
+          });
+        }
+      }
+    });
+    categories.forEach(function (category, index) {
       var header = category.querySelector('.category-header');
       var content = category.querySelector('.category-content');
       var toggle = category.querySelector('.category-toggle');
       var serviceItems = content.querySelectorAll('.service-item');
       var ctaLink = content.querySelector('.category-cta');
-      if (!header || !content) return;
-      var isExpanded = false; // Accordion toggle function
+      if (!header || !content) return; // 🔧 FIX: Add unique identification to prevent cross-contamination
 
-      var toggleAccordion = function toggleAccordion() {
-        isExpanded = !isExpanded; // Update ARIA attributes for accessibility
+      var accordionId = "accordion-".concat(index);
+      category.setAttribute('data-accordion-id', accordionId);
+      content.setAttribute('data-accordion-id', accordionId);
+      window.log('effects', "[SERVICE ACCORDION] Initializing accordion ".concat(index, " with ID: ").concat(accordionId));
+      window.log('effects', "[SERVICE ACCORDION] Accordion ".concat(index, " - header element:"), header);
+      window.log('effects', "[SERVICE ACCORDION] Accordion ".concat(index, " - header ID:"), header ? header.getAttribute('aria-controls') : 'null');
+      window.log('effects', "[SERVICE ACCORDION] Accordion ".concat(index, " - content element:"), content);
+      window.log('effects', "[SERVICE ACCORDION] Accordion ".concat(index, " - content ID:"), content ? content.id : 'null');
+      window.log('effects', "[SERVICE ACCORDION] Accordion ".concat(index, " - serviceItems count:"), serviceItems.length); // 🚨 CRITICAL: Check if this header is shared with other accordions
 
-        header.setAttribute('aria-expanded', isExpanded);
-        content.setAttribute('aria-hidden', !isExpanded); // Toggle expanded class
+      if (index > 0) {
+        var prevAccordion = accordionInstances[index - 1];
 
-        category.classList.toggle('is-expanded', isExpanded);
+        if (prevAccordion && prevAccordion.header === header) {
+          console.error("[SERVICE ACCORDION] \u274C BUG FOUND! Accordion ".concat(index, " shares SAME header element with accordion ").concat(index - 1, "!"));
+        }
+      } // Create accordion instance with proper state management
 
-        if (isExpanded) {
-          // Expand animation
-          console.log('[SERVICE ACCORDION] Expanding category'); // Staggered reveal of service items
 
-          gsap.fromTo(serviceItems, {
-            opacity: 0,
-            y: 20
-          }, {
-            opacity: 1,
-            y: 0,
-            duration: 0.4,
-            stagger: 0.08,
-            ease: 'back.out(1.2)',
-            delay: 0.1
-          }); // Fade in CTA button
+      var accordion = {
+        index: index,
+        // 🔧 FIX: Store index in accordion object for proper closure
+        accordionId: accordionId,
+        element: category,
+        header: header,
+        content: content,
+        serviceItems: serviceItems,
+        ctaLink: ctaLink,
+        isExpanded: false,
+        // Expand this specific accordion
+        expand: function expand() {
+          var _this = this;
 
-          if (ctaLink) {
-            gsap.fromTo(ctaLink, {
-              opacity: 0,
-              y: 10
-            }, {
-              opacity: 1,
-              y: 0,
-              duration: 0.3,
-              delay: 0.3,
-              ease: 'power2.out'
-            });
+          if (this.isExpanded) {
+            window.log('effects', "[SERVICE ACCORDION] Category ".concat(this.index, " (").concat(this.accordionId, ") already expanded, skipping"));
+            return; // Already expanded
           }
-        } else {
-          // Collapse animation - kill any ongoing animations
-          console.log('[SERVICE ACCORDION] Collapsing category');
-          gsap.killTweensOf(serviceItems);
-          gsap.killTweensOf(ctaLink);
+
+          var runExpandLogic = function runExpandLogic() {
+            window.log('effects', "[SERVICE ACCORDION] \uD83D\uDFE2 EXPANDING category ".concat(_this.index, " (").concat(_this.accordionId, ")"));
+            window.log('effects', "[SERVICE ACCORDION] Accordion ".concat(_this.index, " - content element before animation:"), _this.content);
+            _this.isExpanded = true; // Update ARIA attributes for accessibility
+
+            _this.header.setAttribute('aria-expanded', 'true');
+
+            _this.content.setAttribute('aria-hidden', 'false'); // Add expanded class
+
+
+            _this.element.classList.add('is-expanded');
+
+            window.log('effects', "[SERVICE ACCORDION] Category ".concat(_this.index, " - items count:"), _this.serviceItems.length); // Get animation config
+
+            var contentAnim = config.contentAnimation;
+            var ctaAnim = config.ctaAnimation; // 🔧 CRITICAL: Ensure items start from hidden state (force reset before animation)
+
+            gsap.set(_this.serviceItems, contentAnim.itemFrom);
+
+            if (_this.ctaLink) {
+              gsap.set(_this.ctaLink, ctaAnim.from);
+            }
+
+            gsap.killTweensOf(_this.content);
+            gsap.set(_this.content, {
+              maxHeight: 0,
+              padding: '0'
+            }); // Tablet/mobile: pin wrapper's visual center so it expands above and below with no drift (exact viewport anchor).
+
+            var isTabletOrMobile = window.matchMedia && window.matchMedia('(max-width: 899px)').matches;
+            var wrapper = isTabletOrMobile ? _this.element.closest('.services-wrapper') : null;
+
+            if (wrapper) {
+              var r = wrapper.getBoundingClientRect();
+              wrapper._servicesAnchorCenter = r.top + r.height / 2;
+            } // Same GSAP expand animation for desktop and mobile (smooth open).
+
+
+            gsap.to(_this.content, {
+              maxHeight: 600,
+              padding: '0 28px 28px 28px',
+              duration: 0.5,
+              ease: 'power2.inOut',
+              onUpdate: wrapper ? function () {
+                var anchorCenter = wrapper._servicesAnchorCenter;
+                if (anchorCenter == null) return;
+                var rect = wrapper.getBoundingClientRect();
+                var currentY = gsap.getProperty(wrapper, 'y') || 0;
+                gsap.set(wrapper, {
+                  y: anchorCenter - rect.height / 2 - rect.top + currentY
+                });
+              } : undefined
+            });
+            gsap.to(_this.serviceItems, _objectSpread({}, contentAnim.itemTo, {
+              duration: contentAnim.itemDuration,
+              stagger: contentAnim.itemStagger,
+              ease: contentAnim.itemEase,
+              delay: contentAnim.delayAfterContainer
+            }));
+
+            if (_this.ctaLink) {
+              gsap.to(_this.ctaLink, _objectSpread({}, ctaAnim.to, {
+                duration: ctaAnim.duration,
+                delay: ctaAnim.delay,
+                ease: ctaAnim.ease
+              }));
+            }
+          }; // Single-open on tablet/mobile: collapse others first, then expand (smooth, no double-open)
+
+
+          if (window.matchMedia && window.matchMedia('(max-width: 899px)').matches) {
+            var othersToCollapse = accordionInstances.filter(function (o) {
+              return o !== _this && o.isExpanded;
+            });
+
+            if (othersToCollapse.length > 0) {
+              Promise.all(othersToCollapse.map(function (o) {
+                return o.collapse();
+              })).then(function () {
+                runExpandLogic();
+              });
+              return;
+            }
+          }
+
+          runExpandLogic();
+        },
+        // Collapse this specific accordion. Returns a Promise that resolves when collapse animation completes.
+        collapse: function collapse() {
+          var _this2 = this;
+
+          if (!this.isExpanded) return Promise.resolve();
+          window.log('effects', "[SERVICE ACCORDION] \uD83D\uDD34 COLLAPSING category ".concat(this.index, " (").concat(this.accordionId, ")"));
+          this.isExpanded = false; // Update ARIA attributes
+
+          this.header.setAttribute('aria-expanded', 'false');
+          this.content.setAttribute('aria-hidden', 'true'); // Remove expanded class
+
+          this.element.classList.remove('is-expanded');
+          gsap.killTweensOf(this.serviceItems);
+          gsap.killTweensOf(this.ctaLink);
+          gsap.killTweensOf(this.content); // Tablet/mobile: keep wrapper visual top pinned to anchor during collapse so grid does not drift (no jump on next expand, no “all boxes move up”).
+
+          var isTabletOrMobile = window.matchMedia && window.matchMedia('(max-width: 899px)').matches;
+          var wrapper = isTabletOrMobile ? this.element.closest('.services-wrapper') : null;
+          if (wrapper) gsap.killTweensOf(wrapper); // Same GSAP collapse animation for desktop and mobile (smooth close).
+
+          gsap.to(this.serviceItems, {
+            opacity: 0,
+            y: 20,
+            duration: 0.28,
+            ease: 'power2.inOut'
+          });
+          if (this.ctaLink) gsap.to(this.ctaLink, {
+            opacity: 0,
+            y: 10,
+            duration: 0.28,
+            ease: 'power2.inOut'
+          });
+          return new Promise(function (resolve) {
+            gsap.to(_this2.content, {
+              maxHeight: 0,
+              padding: '0',
+              duration: 0.4,
+              ease: 'power2.inOut',
+              onUpdate: wrapper && wrapper._servicesAnchorCenter != null ? function () {
+                var anchorCenter = wrapper._servicesAnchorCenter;
+                var rect = wrapper.getBoundingClientRect();
+                var currentY = gsap.getProperty(wrapper, 'y') || 0;
+                gsap.set(wrapper, {
+                  y: anchorCenter - rect.height / 2 - rect.top + currentY
+                });
+              } : undefined,
+              onComplete: function onComplete() {
+                if (wrapper && wrapper._servicesAnchorCenter != null) {
+                  var rect = wrapper.getBoundingClientRect();
+                  var currentY = gsap.getProperty(wrapper, 'y') || 0;
+                  var layoutTop = rect.top - currentY;
+                  gsap.set(wrapper, {
+                    y: wrapper._servicesAnchorCenter - rect.height / 2 - layoutTop
+                  });
+                }
+
+                gsap.set(_this2.content, {
+                  maxHeight: 0,
+                  padding: 0
+                });
+                resolve();
+              }
+            });
+          });
+        },
+        // Toggle this specific accordion (independent: other sections stay as-is)
+        toggle: function toggle() {
+          if (this.isExpanded) {
+            this.collapse();
+          } else {
+            this.expand();
+          }
         }
       }; // Click event for header
 
+      header.addEventListener('click', function (e) {
+        e.stopPropagation(); // Prevent event bubbling
 
-      header.addEventListener('click', toggleAccordion); // Keyboard accessibility
+        window.log('effects', "[SERVICE ACCORDION] \uD83D\uDDB1\uFE0F CLICK on accordion ".concat(accordion.index, " header"));
+        window.log('effects', "[SERVICE ACCORDION] Clicked element:", e.currentTarget);
+        window.log('effects', "[SERVICE ACCORDION] Accordion header:", accordion.header);
+        window.log('effects', "[SERVICE ACCORDION] Headers match:", e.currentTarget === accordion.header);
+        accordion.toggle();
+      }); // Keyboard accessibility
 
       header.addEventListener('keydown', function (e) {
         if (e.key === 'Enter' || e.key === ' ') {
           e.preventDefault();
-          toggleAccordion();
+          e.stopPropagation(); // Prevent event bubbling
+
+          window.log('effects', "[SERVICE ACCORDION] \u2328\uFE0F KEYBOARD on accordion ".concat(accordion.index, " header"));
+          accordion.toggle();
         }
       }); // Form pre-population when CTA is clicked
 
@@ -254,9 +450,151 @@
             }
           }, 500);
         });
-      }
+      } // Store instance
+
+
+      accordionInstances.push(accordion);
+    }); // Store instances globally for external access
+
+    window.Portfolio.serviceAccordions = accordionInstances;
+    window.log('effects', "[SERVICE ACCORDION] Setup complete - ".concat(categories.length, " categories initialized"));
+  }
+  /**
+   * Reveal service accordion containers sequentially on section entry (content stays collapsed).
+   * Called when Services section becomes active.
+   */
+
+
+  function autoExpandServiceAccordions() {
+    var transactionId = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : null;
+
+    if (!window.Portfolio.serviceAccordions) {
+      window.log('effects', '[SERVICE AUTO-EXPAND] Accordions not initialized');
+      return;
+    }
+
+    var config = window.CONFIG.services;
+
+    if (!config.autoExpandOnEntry) {
+      window.log('effects', '[SERVICE AUTO-EXPAND] Auto-expansion disabled');
+      return;
+    }
+
+    var accordions = window.Portfolio.serviceAccordions;
+    var isTabletOrMobile = window.matchMedia && window.matchMedia('(max-width: 899px)').matches;
+    window.log('effects', '[SERVICE AUTO-EXPAND] Starting container reveal cascade (content stays collapsed)'); // Mobile only: no container reveal animation (no y/scale on cards); cards visible, content collapsed.
+
+    if (isTabletOrMobile) {
+      accordions.forEach(function (accordion) {
+        gsap.killTweensOf(accordion.element);
+        gsap.killTweensOf(accordion.content);
+        gsap.set(accordion.element, config.containerAnimation.to);
+        gsap.set(accordion.content, {
+          maxHeight: 0,
+          padding: 0
+        });
+        accordion.isExpanded = false;
+        accordion.element.classList.remove('is-expanded');
+        accordion.header.setAttribute('aria-expanded', 'false');
+        accordion.content.setAttribute('aria-hidden', 'true');
+      }); // Store anchor position so expand/collapse can keep block in place (flex re-centering causes drift).
+
+      requestAnimationFrame(function () {
+        var wrapper = accordions[0] && accordions[0].element.closest('.services-wrapper');
+
+        if (wrapper) {
+          gsap.set(wrapper, {
+            y: 0
+          });
+          var r = wrapper.getBoundingClientRect();
+          wrapper._servicesAnchorCenter = r.top + r.height / 2;
+        }
+      });
+      return;
+    } // Desktop: reveal containers one by one with delays
+
+
+    accordions.forEach(function (accordion, idx) {
+      var delay = config.startDelay + idx * config.expansionDelay;
+      gsap.delayedCall(delay / 1000, function () {
+        // Validate transaction if provided
+        if (transactionId && window.Portfolio.scroll) {
+          var currentTransactionId = window.Portfolio.scroll.getCurrentTransactionId();
+
+          if (transactionId !== currentTransactionId) {
+            window.log('effects', "[SERVICE AUTO-EXPAND] Transaction ".concat(transactionId, " cancelled - skipping expansion"));
+            return;
+          }
+        } // Check if user is still on Services section
+
+
+        var servicesSection = document.getElementById('services');
+        var currentSectionIndex = window.sections ? window.sections.indexOf(servicesSection) : -1;
+
+        if (currentSectionIndex === window.currentSection) {
+          window.log('effects', "[SERVICE AUTO-EXPAND] \uD83C\uDFAC Revealing container ".concat(accordion.index, " (").concat(accordion.accordionId, ")")); // 🔧 FIX: Kill any existing animations on this specific accordion's element AND content
+
+          gsap.killTweensOf(accordion.element);
+          gsap.killTweensOf(accordion.content); // 🔧 CRITICAL: Force reset content to collapsed state before container animation
+
+          gsap.set(accordion.content, {
+            maxHeight: 0,
+            padding: '0'
+          }); // 🔍 VERIFY: Log state immediately after gsap.set
+
+          setTimeout(function () {
+            var checkStyle = window.getComputedStyle(accordion.content);
+            window.log('effects', "[AUTO-EXPAND ".concat(accordion.index, "] AFTER gsap.set - padding: ").concat(checkStyle.padding, ", maxHeight: ").concat(checkStyle.maxHeight));
+          }, 5); // First animate the container itself appearing (using config values) - ELEMENT-SPECIFIC
+
+          var containerAnim = config.containerAnimation;
+          gsap.to(accordion.element, _objectSpread({}, containerAnim.to, {
+            duration: containerAnim.duration,
+            ease: containerAnim.ease,
+            onStart: function onStart() {
+              window.log('effects', "[SERVICE AUTO-EXPAND] \uD83C\uDFAA Container reveal START for accordion ".concat(accordion.index));
+              window.log('effects', "[SERVICE AUTO-EXPAND] Target element:", accordion.element); // 🔍 Check content state at container animation START
+
+              var startStyle = window.getComputedStyle(accordion.content);
+              window.log('effects', "[CONTAINER START ".concat(accordion.index, "] Content state - padding: ").concat(startStyle.padding, ", maxHeight: ").concat(startStyle.maxHeight));
+            },
+            onComplete: function onComplete() {
+              // Desktop: expand all by default (side-by-side layout). Tablet/mobile: leave collapsed.
+              if (window.matchMedia('(min-width: 900px)').matches) {
+                accordion.expand();
+              }
+
+              window.log('effects', "[SERVICE AUTO-EXPAND] \u2705 Container reveal COMPLETE for accordion ".concat(accordion.index));
+            }
+          }));
+        } else {
+          window.log('effects', '[SERVICE AUTO-EXPAND] User left Services section - stopping auto-expansion');
+        }
+      });
     });
-    console.log("[SERVICE ACCORDION] Setup complete - ".concat(categories.length, " categories initialized"));
+  }
+  /**
+   * Reset all service accordions to collapsed state
+   * Called when leaving Services section
+   */
+
+
+  function resetServiceAccordions() {
+    if (!window.Portfolio.serviceAccordions) return;
+    window.log('effects', '[SERVICE ACCORDION] 🔄 Resetting all accordions');
+    var config = window.CONFIG.services;
+    var isTabletOrMobile = window.matchMedia && window.matchMedia('(max-width: 899px)').matches;
+    var wrapper = isTabletOrMobile && window.Portfolio.serviceAccordions[0] ? window.Portfolio.serviceAccordions[0].element.closest('.services-wrapper') : null;
+    if (wrapper) gsap.set(wrapper, {
+      y: 0
+    });
+    window.Portfolio.serviceAccordions.forEach(function (accordion) {
+      window.log('effects', "[SERVICE ACCORDION] Resetting accordion ".concat(accordion.index, " (").concat(accordion.accordionId, ")")); // Collapse the content
+
+      accordion.collapse(); // Desktop: hide containers for next reveal. Mobile: leave visible (no container reveal).
+
+      gsap.set(accordion.element, isTabletOrMobile ? config.containerAnimation.to : config.containerAnimation.from);
+    });
   }
   /**
    * Setup flip card form pre-population - LEGACY (2024)
@@ -300,22 +638,25 @@
     });
 
     if (window.Portfolio.debug) {
-      console.log('[FLIP CARDS] Form integration setup complete');
+      window.log('effects', '[FLIP CARDS] Form integration setup complete');
     }
   } // Expose effects functions
 
 
   window.Portfolio.effects = {
     setupButtonEffects: setupButtonEffects,
-    setupMobileMenu: setupMobileMenu,
     setupScrollButtonHoverEffects: setupScrollButtonHoverEffects,
     setupServiceAccordion: setupServiceAccordion,
     // Updated Services Layout – 2025 Version
+    autoExpandServiceAccordions: autoExpandServiceAccordions,
+    // Auto-expand on section entry
+    resetServiceAccordions: resetServiceAccordions,
+    // Reset on section exit
     setupFlipCardFormIntegration: setupFlipCardFormIntegration // Legacy - kept for backwards compatibility
 
   };
 
   if (window.Portfolio.debug) {
-    console.log('[EFFECTS] Module loaded successfully');
+    window.log('initialization', '[EFFECTS] Module loaded successfully');
   }
 })();

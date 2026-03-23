@@ -17,6 +17,14 @@ STRICT RULES:
 - Fully implement all requested functionality.
 - Do not run any commands in terminal (gulp, or else), instead ask Michał to run it anc verify.
 - Be conservatie with requests to save as much tokens as possible, those are not cheap.
+
+## ⚠️ CRITICAL: GULP BUILD SYSTEM BEHAVIOR ⚠️
+- **GULP WATCH MODE IS ALWAYS RUNNING IN BACKGROUND** - Files compile automatically on save
+- **NEVER RUN `gulp` COMMAND IN CURSOR'S TERMINAL** - It's already active in separate terminal window
+- **DO NOT WAIT FOR MANUAL EXECUTION** - Changes are compiled instantly when files are saved
+- **AUTOMATIC COMPILATION** - The watch task monitors src/ folder and builds to dist/ automatically
+- After making code changes, simply SAVE the file - Gulp handles the rest automatically
+- Only inform user that changes are ready for testing after saving files
 - Leave NO todo's, placeholders or missing pieces.
 - Ensure code is complete! Verify thoroughly finalized.
 - Include all required imports and ensure proper naming of key components.
@@ -34,7 +42,7 @@ STRICT RULES:
 - In every interaction with the user you will read and follow carefully and STRICTLY the .cursorrules file.
 - You will update the scratchpad.md file to put all of your answers for my query when the user says "plan" for the
   keyword.
-- DO NOT RUN ANY TERMINAL/GULP COMMANDS
+- DO NOT RUN ANY TERMINAL/GULP COMMANDS - Gulp watch is already running in background, compiles on save
 - When the user ask you to create/update/edit/change/modify a rules on a file, make the format as plain english
   text language, with clear intension and convert it into a prompt
 - After multiple failures to fix/implement features proceed with Fundamental Check Protocol at  `.cursor/rules/006-fundamental-checks.mdc`
@@ -47,4 +55,4 @@ STRICT RULES FOR VERSIONING IN @memories.md:
 - Use larger increments (e.g., +0.1.0) for significant features or groups of changes.
 - Reserve major increments (e.g., +1.0.0) for major project milestones or breaking changes.
 - BE ATTENTIVE and choose the appropriate version increment based on the significance of the logged changes.
-- DO NOT RUN the build process to compile. ITS DONE MANUALLY BY USERS. PROMPT TO RUN AND TEST AFTER CODE GENERATION
+- DO NOT RUN the build process to compile. Gulp watch task is ALWAYS ACTIVE in background. Files compile automatically on save. Simply inform user changes are ready for testing.
