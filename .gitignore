@@ -2,34 +2,21 @@ node_modules/
 Projekt.psd
 .cursor/
 .cursorrules
-.cursor/README.md
-.cursor/project-requirements.md
-.cursor/memories.md
-.cursor/lessons-learned.md
-.cursor/scratchpad.md
-.cursor/rules/
-.cursor/rules/README.md
-.cursor/rules/project-requirements.md
-.cursor/rules/memories.md
-.cursor/rules/lessons-learned.md
 .vscode/
-.vscode/settings.json
-.vscode/tasks.json
-.vscode/launch.json
-.vscode/extensions.json
-.vscode/settings.json
-.vscode/tasks.json
-.vscode/launch.json
-.vscode/extensions.json
-.vscode/settings.json
-.vscode/tasks.json
+src/.vscode/
+*.code-workspace
 ProjectRedemption.psd
 WigglePortfolioBackground.aep
 debug.log
+*.log
 
 # Backup files
 *.backup
 *.backup.*
+dist/backup/
+dist/js_backup/
+mainWorking.css
+styleWorking.css
 
 # Build artifacts under src (Gulp dev output)
 src/js/dist/
